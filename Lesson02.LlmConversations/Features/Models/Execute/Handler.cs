@@ -1,22 +1,18 @@
-using Lesson01.Chat.Infrastructure.Ai;
+using Lesson02.LlmConversations.Infrastructure.Ai;
 
-namespace Lesson01.Chat.Features.Models.Execute;
-
+namespace Lesson02.LlmConversations.Features.Models.Execute;
 
 public sealed class Handler(
 	IAiProviderFactory aiProviderFactory)
 {
-	public async Task<AiResponse> Handle(
+	public async Task<AiResponse> HandleAsync(
 		AiRequest aiRequest,
 		CancellationToken cancellationToken)
 	{
-		var aiProvider = aiProviderFactory.GetProvider(aiRequest.Model);
+		var aiProvider = aiProviderFactory.GetProvider(aiRequest.Provider);
 
-		AiResponse aiAiResponse =
-			await aiProvider.SendAsync(
+		return await aiProvider.SendAsync(
 				aiRequest,
 				cancellationToken);
-		
-		return aiAiResponse;
 	}
 }

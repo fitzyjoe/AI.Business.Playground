@@ -1,6 +1,6 @@
-using Lesson01.Chat.Features.Models.Execute;
+using Lesson02.LlmConversations.Features.Models.Execute;
 
-namespace Lesson01.Chat.Infrastructure.Ai;
+namespace Lesson02.LlmConversations.Infrastructure.Ai;
 
 public interface IAiProvider
 {

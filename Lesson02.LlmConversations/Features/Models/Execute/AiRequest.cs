@@ -1,4 +1,4 @@
-namespace Lesson01.Chat.Features.Models.Execute;
+namespace Lesson02.LlmConversations.Features.Models.Execute;
 
 public sealed class AiRequest
 {
@@ -8,7 +8,9 @@ public sealed class AiRequest
 
 	public float Temperature { get; init; } = 0.2f;
 
-	public string Model { get; init; } = "ollama";
+	public string Provider { get; init; } = "ollama";
+	
+	public string? Model { get; init; }
 
 	public int? MaxTokens { get; init; }
 }

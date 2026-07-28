@@ -1,4 +1,4 @@
-namespace Lesson01.Chat.Infrastructure.Ai.Providers;
+namespace Lesson02.LlmConversations.Infrastructure.Ai.Providers;
 
 public class OllamaOptions
 {

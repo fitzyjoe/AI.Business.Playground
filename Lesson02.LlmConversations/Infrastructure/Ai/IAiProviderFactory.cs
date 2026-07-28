@@ -1,4 +1,4 @@
-namespace Lesson01.Chat.Infrastructure.Ai;
+namespace Lesson02.LlmConversations.Infrastructure.Ai;
 
 public interface IAiProviderFactory
 {

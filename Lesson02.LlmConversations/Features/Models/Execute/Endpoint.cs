@@ -1,6 +1,4 @@
-using Lesson01.Chat.Features.Models.Execute;
-
-namespace Lesson01.Chat.Features.Models.Execute;
+namespace Lesson02.LlmConversations.Features.Models.Execute;
 
 public static class Endpoint
 {
@@ -12,7 +10,7 @@ public static class Endpoint
 					Handler handler,
 					CancellationToken cancellationToken) =>
 				{
-					var response = await handler.Handle(aiRequest, cancellationToken);
+					var response = await handler.HandleAsync(aiRequest, cancellationToken);
 					return Results.Ok(response);
 				})
 			.WithName("ExecutePromptPost")

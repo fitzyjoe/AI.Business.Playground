@@ -1,43 +1,53 @@
-using Lesson01.Chat.Features.Models.Execute;
+using System.Diagnostics;
 using OllamaSharp;
+using OllamaSharp.Models;
 using OllamaSharp.Models.Chat;
 using System.Text;
+using Lesson02.LlmConversations.Features.Models.Execute;
 using Microsoft.Extensions.Options;
-using OllamaSharp.Models;
 
-namespace Lesson01.Chat.Infrastructure.Ai.Providers;
+namespace Lesson02.LlmConversations.Infrastructure.Ai.Providers;
 
 public sealed class OllamaProvider : IAiProvider
 {
 	private readonly OllamaApiClient _ollama;
+	private readonly OllamaOptions _options;
 
-	public OllamaProvider(HttpClient httpClient, IOptions<OllamaOptions> options)
+	public OllamaProvider(
+		HttpClient httpClient,
+		IOptions<OllamaOptions> options)
 	{
-		httpClient.BaseAddress = new Uri(options.Value.Endpoint);
-		_ollama = new OllamaApiClient(httpClient)
-		{
-			SelectedModel = options.Value.Model
-		};
+		_options = options.Value;
+		_ollama = new OllamaApiClient(httpClient);
 	}
 	
 	public async Task<AiResponse> SendAsync(
 		AiRequest aiRequest,
 		CancellationToken cancellationToken = default)
 	{
-		var sb = new StringBuilder();
-		var chatRequest = new ChatRequest
+		var model = aiRequest.Model ?? _options.Model;
+		var messages = CreateMessages(aiRequest);
+		
+		var options = new RequestOptions
 		{
-			Messages = [new Message { Role = ChatRole.User, Content = aiRequest.Prompt },
-				new Message { Role = ChatRole.System, Content = aiRequest.SystemPrompt }],
-			Options = new RequestOptions
-			{
-				Temperature = aiRequest.Temperature,
-				NumPredict = aiRequest.MaxTokens ?? -1
-			}
+			Temperature = aiRequest.Temperature
 		};
 		
-		var startTime = DateTime.Now;
+		if (aiRequest.MaxTokens.HasValue)
+		{
+			options.NumPredict = aiRequest.MaxTokens.Value;
+		}
+		
+		var chatRequest = new ChatRequest
+		{
+			Model = model,
+			Messages = messages,
+			Options = options
+		};
+		
+		var stopwatch = Stopwatch.StartNew();
 
+		var sb = new StringBuilder();
 		await foreach (var response in _ollama.ChatAsync(chatRequest, cancellationToken))
 		{
 			if (response?.Message?.Content != null)
@@ -46,8 +56,30 @@ public sealed class OllamaProvider : IAiProvider
 			}
 		}
 		
-		var endTime = DateTime.Now;
+		stopwatch.Stop();
 
-		return new AiResponse(sb.ToString(), _ollama.SelectedModel, endTime.Subtract(startTime));
+		return new AiResponse(sb.ToString(), _ollama.SelectedModel, stopwatch.Elapsed);
+	}
+	
+	private static List<Message> CreateMessages(AiRequest request)
+	{
+		var messages = new List<Message>();
+
+		if (!string.IsNullOrWhiteSpace(request.SystemPrompt))
+		{
+			messages.Add(new Message
+			{
+				Role = ChatRole.System,
+				Content = request.SystemPrompt
+			});
+		}
+
+		messages.Add(new Message
+		{
+			Role = ChatRole.User,
+			Content = request.Prompt
+		});
+
+		return messages;
 	}
 }

@@ -1,15 +1,15 @@
-using Lesson01.Chat.Infrastructure.Ai.Providers;
+using Lesson02.LlmConversations.Infrastructure.Ai.Providers;
 
-namespace Lesson01.Chat.Infrastructure.Ai;
+namespace Lesson02.LlmConversations.Infrastructure.Ai;
 
-public sealed class AiProviderFactory(IServiceProvider serviceProvider) : IAiProviderFactory
+public sealed class AiProviderFactory(OllamaProvider ollamaProvider) : IAiProviderFactory
 {
-    public IAiProvider GetProvider(string modelName)
+    public IAiProvider GetProvider(string providerName)
     {
-        return modelName.ToLowerInvariant() switch
+        return providerName.ToLowerInvariant() switch
         {
-            "ollama" => serviceProvider.GetRequiredService<OllamaProvider>(),
-            _ => throw new NotSupportedException($"AI Provider for model '{modelName}' is not supported.")
+            "ollama" => ollamaProvider,
+            _ => throw new NotSupportedException($"AI Provider '{providerName}' is not supported.")
         };
     }
 }

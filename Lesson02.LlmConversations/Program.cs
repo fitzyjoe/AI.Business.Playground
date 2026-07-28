@@ -19,9 +19,6 @@ builder.Services
 		"An Ollama default model is required.")
 	.ValidateOnStart();
 
-builder.Services.Configure<OllamaOptions>(
-	builder.Configuration.GetSection("Ollama"));
-
 builder.Services.AddHttpClient<OllamaProvider>(
 	(serviceProvider, httpClient) =>
 	{

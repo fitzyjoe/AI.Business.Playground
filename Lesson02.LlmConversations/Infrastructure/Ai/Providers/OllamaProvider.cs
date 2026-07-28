@@ -58,7 +58,7 @@ public sealed class OllamaProvider : IAiProvider
 		
 		stopwatch.Stop();
 
-		return new AiResponse(sb.ToString(), _ollama.SelectedModel, stopwatch.Elapsed);
+		return new AiResponse(sb.ToString(), model, stopwatch.Elapsed);
 	}
 	
 	private static List<Message> CreateMessages(AiRequest request)

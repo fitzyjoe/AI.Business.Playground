@@ -33,10 +33,7 @@ builder.Services.AddHttpClient<OllamaProvider>(
 	});
 
 builder.Services.AddTransient<IAiProviderFactory, AiProviderFactory>();
-
-builder.Services.AddHttpClient();
 builder.Services.AddTransient<Handler>();
-builder.Services.AddSingleton<IAiProviderFactory, AiProviderFactory>();
 
 var app = builder.Build();
 

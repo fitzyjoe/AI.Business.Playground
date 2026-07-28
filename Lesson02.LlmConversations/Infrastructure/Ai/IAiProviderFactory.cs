@@ -2,5 +2,5 @@ namespace Lesson02.LlmConversations.Infrastructure.Ai;
 
 public interface IAiProviderFactory
 {
-    IAiProvider GetProvider(string modelName);
+    IAiProvider GetProvider(string providerName);
 }

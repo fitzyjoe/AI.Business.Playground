@@ -3,7 +3,7 @@ namespace Lesson03.LlmConversations.Features.Conversations;
 public class Conversation
 {
 	public Guid Id { get; init; } = Guid.NewGuid();
-	public string SystemPrompt { get; init; } = "As an AI assistant";
+	public required string SystemPrompt { get; init; }
 	public string Provider { get; init; } = "ollama";
 	public string? Model { get; init; }
 	public float? Temperature { get; init; }

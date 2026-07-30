@@ -34,7 +34,6 @@ builder.Services.AddHttpClient<OllamaProvider>(
 builder.Services.AddTransient<IAiProviderFactory, AiProviderFactory>();
 builder.Services.AddTransient<MessageHandler>();
 builder.Services.AddSingleton<IConversationRepository, InMemoryConversationRepository>();
-builder.Services.AddScoped<MessageRequestValidator>();
 
 var app = builder.Build();
 

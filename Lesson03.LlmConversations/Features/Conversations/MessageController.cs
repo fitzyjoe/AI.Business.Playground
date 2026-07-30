@@ -8,7 +8,7 @@ namespace Lesson03.LlmConversations.Features.Conversations;
 public class MessageController(MessageHandler _messageHandler) : ControllerBase
 {
 	[HttpPost]
-	[ProducesResponseType(StatusCodes.Status201Created)]
+	[ProducesResponseType(StatusCodes.Status200OK)]
 	public async Task<ActionResult<MessageResponse>> Post(MessageRequest messageRequest, CancellationToken cancellationToken)
 	{
 		return await _messageHandler.HandleAsync(messageRequest, cancellationToken);

@@ -88,26 +88,4 @@ public sealed class OllamaProvider : IAiProvider
 			Content = message.Content
 		};
 	}
-	
-	private static List<Message> CreateMessages(MessageRequest request)
-	{
-		var messages = new List<Message>();
-
-		if (!string.IsNullOrWhiteSpace(request.SystemPrompt))
-		{
-			messages.Add(new Message
-			{
-				Role = ChatRole.System,
-				Content = request.SystemPrompt
-			});
-		}
-
-		messages.Add(new Message
-		{
-			Role = ChatRole.User,
-			Content = request.Content
-		});
-
-		return messages;
-	}
 }

@@ -21,13 +21,15 @@ public sealed class MessageHandler(
 		
 		if (messageRequest.ConversationId.HasValue)
 		{
-			var possibleConversation = await conversationRepository.GetAsync(messageRequest.ConversationId.Value);
+			var possibleConversation = await conversationRepository.GetAsync(
+				messageRequest.ConversationId.Value, 
+				cancellationToken);
 			conversation = possibleConversation ?? throw new Exception("No conversation found for supplied conversationId " +
 			                                                           messageRequest.ConversationId.Value);
 		}
 		else
 		{
-			conversation = new Conversation();
+			conversation = CreateConversation(messageRequest);
 		}
 		
 		var aiRequest = new AiChatRequest
@@ -40,7 +42,7 @@ public sealed class MessageHandler(
 			MaxTokens = conversation.MaxTokens
 		};
 		
-		var aiProvider = aiProviderFactory.GetProvider(messageRequest.Provider);
+		var aiProvider = aiProviderFactory.GetProvider(conversation.Provider);
 
 		var aiChatResponse = await aiProvider.SendAsync(
 			aiRequest,
@@ -87,5 +89,17 @@ public sealed class MessageHandler(
 		messages.Add(pendingUserMessage);
 
 		return messages;
+	}
+
+	private static Conversation CreateConversation(MessageRequest request)
+	{
+		return new Conversation
+		{
+			SystemPrompt = request.SystemPrompt ?? "You are a helpful assistant.",
+			Provider = request.Provider,
+			Model = request.Model,
+			Temperature = request.Temperature,
+			MaxTokens = request.MaxTokens
+		};
 	}
 }

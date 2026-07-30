@@ -2,6 +2,7 @@
 using Lesson03.LlmConversations.Infrastructure.Ai;
 using Lesson03.LlmConversations.Infrastructure.Ai.Providers;
 using Lesson03.LlmConversations.Infrastructure.Conversations;
+using Lesson03.LlmConversations.Infrastructure.ErrorHandling;
 using Microsoft.Extensions.Options;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -35,8 +36,12 @@ builder.Services.AddTransient<IAiProviderFactory, AiProviderFactory>();
 builder.Services.AddTransient<MessageHandler>();
 builder.Services.AddSingleton<IConversationRepository, InMemoryConversationRepository>();
 
+builder.Services.AddProblemDetails();
+builder.Services.AddExceptionHandler<ConversationNotFoundExceptionHandler>();
+
 var app = builder.Build();
 
+app.UseExceptionHandler();
 app.MapControllers();
 
 app.Run();

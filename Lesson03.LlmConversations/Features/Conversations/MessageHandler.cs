@@ -3,34 +3,35 @@ using Lesson03.LlmConversations.Infrastructure.Ai;
 namespace Lesson03.LlmConversations.Features.Conversations;
 
 public sealed class MessageHandler(
-	IConversationRepository conversationRepository,
-	IAiProviderFactory aiProviderFactory)
+	IConversationRepository _conversationRepository,
+	IAiProviderFactory _aiProviderFactory)
 {
 	public async Task<MessageResponse> HandleAsync(
 		MessageRequest messageRequest,
 		CancellationToken cancellationToken)
 	{
+		Conversation conversation;
+		
+		if (messageRequest.ConversationId.HasValue)
+		{
+			conversation =
+				await _conversationRepository.GetAsync(
+					messageRequest.ConversationId.Value,
+					cancellationToken)
+				?? throw new ConversationNotFoundException(
+					messageRequest.ConversationId.Value);
+		}
+		else
+		{
+			conversation = CreateConversation(messageRequest);
+		}
+		
 		var userMessage = new ConversationMessage
 		{
 			Role = ConversationRole.User,
 			Content = messageRequest.Content,
 			CreatedAt = DateTimeOffset.UtcNow
 		};
-		
-		Conversation conversation;
-		
-		if (messageRequest.ConversationId.HasValue)
-		{
-			var possibleConversation = await conversationRepository.GetAsync(
-				messageRequest.ConversationId.Value, 
-				cancellationToken);
-			conversation = possibleConversation ?? throw new Exception("No conversation found for supplied conversationId " +
-			                                                           messageRequest.ConversationId.Value);
-		}
-		else
-		{
-			conversation = CreateConversation(messageRequest);
-		}
 		
 		var aiRequest = new AiChatRequest
 		{
@@ -42,7 +43,7 @@ public sealed class MessageHandler(
 			MaxTokens = conversation.MaxTokens
 		};
 		
-		var aiProvider = aiProviderFactory.GetProvider(conversation.Provider);
+		var aiProvider = _aiProviderFactory.GetProvider(conversation.Provider);
 
 		var aiChatResponse = await aiProvider.SendAsync(
 			aiRequest,
@@ -60,7 +61,7 @@ public sealed class MessageHandler(
 		conversation.Messages.Add(assistantMessage);
 		conversation.UpdatedAt = assistantMessage.CreatedAt;
 		
-		await conversationRepository.SaveAsync(
+		await _conversationRepository.SaveAsync(
 			conversation,
 			cancellationToken);
 		
@@ -95,8 +96,8 @@ public sealed class MessageHandler(
 	{
 		return new Conversation
 		{
-			SystemPrompt = request.SystemPrompt ?? "You are a helpful assistant.",
-			Provider = request.Provider,
+			SystemPrompt = string.IsNullOrWhiteSpace(request.SystemPrompt) ? "You are a helpful assistant." : request.SystemPrompt,
+			Provider = request.Provider ?? "ollama",
 			Model = request.Model,
 			Temperature = request.Temperature,
 			MaxTokens = request.MaxTokens

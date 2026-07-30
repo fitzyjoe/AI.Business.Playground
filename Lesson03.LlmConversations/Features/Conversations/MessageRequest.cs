@@ -14,7 +14,7 @@ public sealed class MessageRequest : IValidatableObject
 	[Range(0.0, 2.0, ErrorMessage = "Temperature must be between 0.0 and 2.0.")]
 	public float? Temperature { get; init; }
 
-	public string Provider { get; init; } = "ollama";
+	public string? Provider { get; init; }
 	
 	public string? Model { get; init; }
 
@@ -25,6 +25,11 @@ public sealed class MessageRequest : IValidatableObject
 	{
 		if (ConversationId.HasValue)
 		{
+			if (Provider is not null)
+			{
+				yield return new ValidationResult("Provider can only be supplied when starting a conversation.", [nameof(Provider)]);
+			}
+			
 			if (SystemPrompt is not null)
 			{
 				yield return new ValidationResult("SystemPrompt can only be supplied when starting a conversation.", [nameof(SystemPrompt)]);

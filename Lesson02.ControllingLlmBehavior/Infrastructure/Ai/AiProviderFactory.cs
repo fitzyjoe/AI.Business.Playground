@@ -1,6 +1,6 @@
-using Lesson02.LlmConversations.Infrastructure.Ai.Providers;
+using Lesson02.ControllingLlmBehavior.Infrastructure.Ai.Providers;
 
-namespace Lesson02.LlmConversations.Infrastructure.Ai;
+namespace Lesson02.ControllingLlmBehavior.Infrastructure.Ai;
 
 public sealed class AiProviderFactory(OllamaProvider ollamaProvider) : IAiProviderFactory
 {

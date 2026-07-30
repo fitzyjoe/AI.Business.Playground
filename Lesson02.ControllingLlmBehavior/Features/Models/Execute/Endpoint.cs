@@ -1,4 +1,4 @@
-namespace Lesson02.LlmConversations.Features.Models.Execute;
+namespace Lesson02.ControllingLlmBehavior.Features.Models.Execute;
 
 public static class Endpoint
 {

@@ -1,6 +1,6 @@
-using Lesson02.LlmConversations.Features.Models.Execute;
+using Lesson02.ControllingLlmBehavior.Features.Models.Execute;
 
-namespace Lesson02.LlmConversations.Infrastructure.Ai;
+namespace Lesson02.ControllingLlmBehavior.Infrastructure.Ai;
 
 public interface IAiProvider
 {

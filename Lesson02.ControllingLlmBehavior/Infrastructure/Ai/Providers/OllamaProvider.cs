@@ -3,10 +3,10 @@ using OllamaSharp;
 using OllamaSharp.Models;
 using OllamaSharp.Models.Chat;
 using System.Text;
-using Lesson02.LlmConversations.Features.Models.Execute;
+using Lesson02.ControllingLlmBehavior.Features.Models.Execute;
 using Microsoft.Extensions.Options;
 
-namespace Lesson02.LlmConversations.Infrastructure.Ai.Providers;
+namespace Lesson02.ControllingLlmBehavior.Infrastructure.Ai.Providers;
 
 public sealed class OllamaProvider : IAiProvider
 {

@@ -1,6 +1,6 @@
-using Lesson02.LlmConversations.Infrastructure.Ai;
+using Lesson02.ControllingLlmBehavior.Infrastructure.Ai;
 
-namespace Lesson02.LlmConversations.Features.Models.Execute;
+namespace Lesson02.ControllingLlmBehavior.Features.Models.Execute;
 
 public sealed class Handler(
 	IAiProviderFactory aiProviderFactory)

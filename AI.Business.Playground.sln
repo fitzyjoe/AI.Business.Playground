@@ -2,7 +2,9 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lesson01.BasicPrompting", "Lesson01.BasicPrompting\Lesson01.BasicPrompting.csproj", "{965024DA-54AF-48B4-9546-053FA0D0D344}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lesson02.LlmConversations", "Lesson02.LlmConversations\Lesson02.LlmConversations.csproj", "{D960AD0C-90FC-4D1C-95C2-C2C8FD98BFC7}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lesson02.ControllingLlmBehavior", "Lesson02.ControllingLlmBehavior\Lesson02.ControllingLlmBehavior.csproj", "{D960AD0C-90FC-4D1C-95C2-C2C8FD98BFC7}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lesson03.LlmConversations", "Lesson03.LlmConversations\Lesson03.LlmConversations.csproj", "{9D7802C0-190F-4550-9341-4346A0D19C73}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -18,5 +20,9 @@ Global
 		{D960AD0C-90FC-4D1C-95C2-C2C8FD98BFC7}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D960AD0C-90FC-4D1C-95C2-C2C8FD98BFC7}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D960AD0C-90FC-4D1C-95C2-C2C8FD98BFC7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9D7802C0-190F-4550-9341-4346A0D19C73}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9D7802C0-190F-4550-9341-4346A0D19C73}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9D7802C0-190F-4550-9341-4346A0D19C73}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9D7802C0-190F-4550-9341-4346A0D19C73}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

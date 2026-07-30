@@ -1,4 +1,4 @@
-namespace Lesson02.LlmConversations.Infrastructure.Ai;
+namespace Lesson02.ControllingLlmBehavior.Infrastructure.Ai;
 
 public interface IAiProviderFactory
 {

@@ -8,11 +8,6 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <Folder Include="Infrastructure\Configuration\" />
-      <Folder Include="Infrastructure\Logging\" />
-    </ItemGroup>
-
-    <ItemGroup>
       <PackageReference Include="OllamaSharp" Version="5.4.27" />
     </ItemGroup>
 

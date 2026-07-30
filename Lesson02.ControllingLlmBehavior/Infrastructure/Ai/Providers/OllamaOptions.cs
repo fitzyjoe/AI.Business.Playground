@@ -1,4 +1,4 @@
-namespace Lesson02.LlmConversations.Infrastructure.Ai.Providers;
+namespace Lesson02.ControllingLlmBehavior.Infrastructure.Ai.Providers;
 
 public class OllamaOptions
 {

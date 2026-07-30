@@ -1,6 +1,6 @@
-﻿using Lesson02.LlmConversations.Features.Models.Execute;
-using Lesson02.LlmConversations.Infrastructure.Ai;
-using Lesson02.LlmConversations.Infrastructure.Ai.Providers;
+﻿using Lesson02.ControllingLlmBehavior.Features.Models.Execute;
+using Lesson02.ControllingLlmBehavior.Infrastructure.Ai;
+using Lesson02.ControllingLlmBehavior.Infrastructure.Ai.Providers;
 using Microsoft.Extensions.Options;
 
 var builder = WebApplication.CreateBuilder(args);

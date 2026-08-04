@@ -28,7 +28,8 @@ public static class StructuredOutputJson
 
 		options.Converters.Add(
 			new JsonStringEnumConverter(
-				JsonNamingPolicy.CamelCase));
+				JsonNamingPolicy.CamelCase,
+				allowIntegerValues: false));
 
 		return options;
 	}

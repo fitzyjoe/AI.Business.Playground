@@ -25,9 +25,7 @@ public sealed class OllamaProvider : IAiProvider
 		CancellationToken cancellationToken = default)
 	{
 		var model = aiRequest.Model ?? _options.Model;
-
-		// var messages = aiRequest.Messages.Select(ToOllamaMessage).ToList();
-
+		
 		var options = new RequestOptions();
 		if (aiRequest.Temperature.HasValue)
 		{

@@ -1,6 +1,6 @@
 namespace Lesson04.StructuredOutputs.Features.Correspondence;
 
-public class InvalidCorrespondenceAnalysisException : Exception
+public sealed class InvalidCorrespondenceAnalysisException : Exception
 {
 	public InvalidCorrespondenceAnalysisException(string message) : base(message)
 	{

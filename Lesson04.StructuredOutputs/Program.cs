@@ -1,8 +1,8 @@
-﻿using Lesson04.StructuredOutputs.Features.Conversations;
+﻿using System.Text.Json;
+using System.Text.Json.Serialization;
+using Lesson04.StructuredOutputs.Features.Correspondence;
 using Lesson04.StructuredOutputs.Infrastructure.Ai;
 using Lesson04.StructuredOutputs.Infrastructure.Ai.Providers;
-using Lesson04.StructuredOutputs.Infrastructure.Conversations;
-using Lesson04.StructuredOutputs.Infrastructure.ErrorHandling;
 using Microsoft.Extensions.Options;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -21,7 +21,16 @@ builder.Services
 		"An Ollama default model is required.")
 	.ValidateOnStart();
 
-builder.Services.AddControllers();
+builder.Services
+	.AddControllers()
+	.AddJsonOptions(options =>
+	{
+		options.JsonSerializerOptions.Converters.Add(
+			new JsonStringEnumConverter(
+				JsonNamingPolicy.CamelCase,
+				allowIntegerValues: false));
+	});
+
 builder.Services.AddHttpClient<OllamaProvider>(
 	(serviceProvider, httpClient) =>
 	{
@@ -33,11 +42,9 @@ builder.Services.AddHttpClient<OllamaProvider>(
 	});
 
 builder.Services.AddTransient<IAiProviderFactory, AiProviderFactory>();
-builder.Services.AddTransient<MessageHandler>();
-builder.Services.AddSingleton<IConversationRepository, InMemoryConversationRepository>();
+builder.Services.AddScoped<AnalyzeCorrespondenceHandler>();
 
 builder.Services.AddProblemDetails();
-builder.Services.AddExceptionHandler<ConversationNotFoundExceptionHandler>();
 
 var app = builder.Build();
 

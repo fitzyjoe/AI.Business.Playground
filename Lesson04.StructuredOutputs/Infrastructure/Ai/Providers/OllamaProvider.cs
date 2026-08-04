@@ -3,7 +3,6 @@ using OllamaSharp;
 using OllamaSharp.Models;
 using OllamaSharp.Models.Chat;
 using System.Text;
-using Lesson04.StructuredOutputs.Features.Conversations;
 using Microsoft.Extensions.Options;
 
 namespace Lesson04.StructuredOutputs.Infrastructure.Ai.Providers;
@@ -27,7 +26,7 @@ public sealed class OllamaProvider : IAiProvider
 	{
 		var model = aiRequest.Model ?? _options.Model;
 
-		var messages = aiRequest.Messages.Select(ToOllamaMessage).ToList();
+		// var messages = aiRequest.Messages.Select(ToOllamaMessage).ToList();
 
 		var options = new RequestOptions();
 		if (aiRequest.Temperature.HasValue)
@@ -43,46 +42,43 @@ public sealed class OllamaProvider : IAiProvider
 		var chatRequest = new ChatRequest
 		{
 			Model = model,
-			Messages = messages,
-			Options = options
+			Messages = aiRequest.Messages.Select(ToOllamaMessage).ToList(),
+			Options = options,
+			Format = aiRequest.ResponseFormat,
+			Stream = aiRequest.Stream
 		};
 		
 		var stopwatch = Stopwatch.StartNew();
 
-		var sb = new StringBuilder();
+		var responseText = new StringBuilder();
 		await foreach (var response in _ollama.ChatAsync(chatRequest, cancellationToken))
 		{
 			if (response?.Message?.Content != null)
 			{
-				sb.Append(response.Message.Content);
+				responseText.Append(response.Message.Content);
 			}
 		}
 		
 		stopwatch.Stop();
 
-		return new AiChatResponse(sb.ToString(), model, stopwatch.Elapsed);
+		return new AiChatResponse(responseText.ToString(), model, stopwatch.Elapsed);
 	}
 	
 	private static Message ToOllamaMessage(
-		ConversationMessage message)
+		AiChatMessage message)
 	{
 		return new Message
 		{
 			Role = message.Role switch
 			{
-				ConversationRole.System =>
-					ChatRole.System,
-
-				ConversationRole.User =>
-					ChatRole.User,
-
-				ConversationRole.Assistant =>
-					ChatRole.Assistant,
+				AiMessageRole.System => ChatRole.System,
+				AiMessageRole.User => ChatRole.User,
+				AiMessageRole.Assistant => ChatRole.Assistant,
 
 				_ => throw new ArgumentOutOfRangeException(
 					nameof(message.Role),
 					message.Role,
-					"Unsupported conversation role.")
+					"Unsupported AI message role.")
 			},
 
 			Content = message.Content

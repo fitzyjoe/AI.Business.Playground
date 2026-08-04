@@ -5,8 +5,7 @@ using Lesson04.StructuredOutputs.Infrastructure.Ai;
 namespace Lesson04.StructuredOutputs.Features.Correspondence;
 
 public sealed class AnalyzeCorrespondenceHandler(
-	IAiProviderFactory aiProviderFactory,
-	ILogger<AnalyzeCorrespondenceHandler> logger)
+	IAiProviderFactory _aiProviderFactory)
 {
 	private const string ProviderName = "ollama";
 
@@ -14,26 +13,30 @@ public sealed class AnalyzeCorrespondenceHandler(
 		CancellationToken cancellationToken)
 	{
 		var schema = StructuredOutputJson.Options.GetJsonSchemaAsNode(typeof(CorrespondenceAnalysis));
-		var
-			aiRequest = new AiChatRequest
-			{
-				Messages =
-				[
-					new AiChatMessage { Role = AiMessageRole.System, Content = BuildSystemPrompt() },
-					new AiChatMessage
-					{
-						Role = AiMessageRole.User,
-						Content = BuildUserPrompt(request.DocumentText, schema.ToJsonString())
-					}
-				],
+		var aiRequest = new AiChatRequest
+		{
+			Messages =
+			[
+				new AiChatMessage
+				{
+					Role = AiMessageRole.System, 
+					Content = BuildSystemPrompt()
+				},
+				new AiChatMessage
+				{
+					Role = AiMessageRole.User,
+					Content = BuildUserPrompt(request.DocumentText, schema.ToJsonString())
+				}
+			],
 
-				// Extraction should be consistent rather than creative.
-				Temperature = 0, ResponseFormat = schema,
+			// Extraction should be consistent rather than creative.
+			Temperature = 0, 
+			ResponseFormat = schema,
 
-				// Wait for one complete JSON object.
-				Stream = false
-			};
-		var provider = aiProviderFactory.GetProvider(ProviderName);
+			// Wait for one complete JSON object.
+			Stream = false
+		};
+		var provider = _aiProviderFactory.GetProvider(ProviderName);
 		var aiResponse = await provider.SendAsync(aiRequest, cancellationToken);
 		var analysis = Deserialize(aiResponse.Text).NormalizeAndValidate();
 		return new AnalyzeCorrespondenceResponse(analysis, aiResponse.Model, aiResponse.Duration);

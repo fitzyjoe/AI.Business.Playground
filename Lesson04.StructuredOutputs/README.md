@@ -1,8 +1,27 @@
 # Lesson 04: Structured Outputs
 
-In this lesson, we take the plain text results of an OCR scan, and we send it to the LLM for classification and
-indexing.  We create a JSON schema from an object and we provide it to the LLM.  This shows how we can make an LLM
-produce structured output that we can programmatically rely upon.
+In this lesson, we take plain text produced by OCR and send it
+to an LLM for document classification and field extraction.
+
+We generate a JSON Schema from a C# type and supply that schema
+to the LLM. This constrains the response to a predictable shape
+that can be deserialized and validated by ordinary C# code.
+
+# Demonstrates
+
+```text
+OCR text
+↓
+Generated JSON Schema
+↓
+Structured LLM response
+↓
+Strongly typed deserialization
+↓
+Normalization and validation
+↓
+Parsed API response
+```
 
 # Test cases
 

@@ -1,3 +1,5 @@
+using System.Globalization;
+
 namespace Lesson04.StructuredOutputs.Features.Correspondence;
 
 public sealed record HearingScheduleDetails
@@ -18,6 +20,8 @@ public sealed record HearingScheduleDetails
 
 		if (!TimeOnly.TryParse(
 			    HearingTime,
+			    CultureInfo.GetCultureInfo("en-US"),
+			    DateTimeStyles.AllowWhiteSpaces,
 			    out _))
 		{
 			throw new InvalidCorrespondenceAnalysisException(

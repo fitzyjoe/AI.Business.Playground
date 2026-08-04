@@ -6,11 +6,4 @@ public sealed class InvalidCorrespondenceAnalysisException : Exception
 	{
 		
 	}
-
-	public InvalidCorrespondenceAnalysisException(string message, Exception innerException) : base(message,
-		innerException)
-	{
-		
-	}
-	
 }

@@ -26,9 +26,7 @@ public sealed class PropertyTools(IPropertyRepository _propertyRepository)
     {
         if (string.IsNullOrWhiteSpace(parcelNumber))
         {
-            throw new McpProtocolException(
-                "parcelNumber is required.",
-                McpErrorCode.InvalidParams);
+            throw new McpException("parcelNumber is required.");
         }
 
         var property =
@@ -68,20 +66,13 @@ public sealed class PropertyTools(IPropertyRepository _propertyRepository)
     {
         if (string.IsNullOrWhiteSpace(ownerName))
         {
-            throw new McpProtocolException(
-                "ownerName is required.",
-                McpErrorCode.InvalidParams);
+            throw new McpException("ownerName is required.");
         }
 
         if (maxResults is < 1 or > 25)
         {
-            throw new McpProtocolException(
-                "maxResults must be between 1 and 25.",
-                McpErrorCode.InvalidParams);
+            throw new McpException("maxResults must be between 1 and 25.");
         }
-        
-        // artificial delay to test cancellations
-        await Task.Delay( TimeSpan.FromSeconds(5), cancellationToken);
 
         var properties =
             await _propertyRepository.SearchByOwnerAsync(

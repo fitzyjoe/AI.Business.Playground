@@ -242,7 +242,7 @@ Launch the Inspector:
 
 ```bash
 npx @modelcontextprotocol/inspector \
-  "Lesson05.McpFundamentals/bin/Debug/net10.0/Lesson05.McpFundamentals"
+  "./bin/Debug/net10.0/Lesson05.McpFundamentals"
 ```
 
 If you modify the C# project, remember:
@@ -261,7 +261,7 @@ The Inspector CLI can return the full tool definitions:
 
 ```bash
 npx @modelcontextprotocol/inspector --cli \
-  "Lesson05.McpFundamentals/bin/Debug/net10.0/Lesson05.McpFundamentals" \
+  "./bin/Debug/net10.0/Lesson05.McpFundamentals" \
   --method tools/list
 ```
 

@@ -26,6 +26,5 @@ builder.Logging.AddConsole(options =>
 	options.LogToStandardErrorThreshold = LogLevel.Trace;
 });
 builder.Services.AddSingleton<IPropertyRepository, InMemoryPropertyRepository>();
-builder.Services.AddMcpServer().WithStdioServerTransport().WithTools<PropertyTools>();
 await builder.Build().RunAsync();
 

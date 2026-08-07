@@ -214,12 +214,6 @@ The compiled executable will be located under:
 bin/Debug/net10.0/
 ```
 
-On macOS it will look similar to:
-
-```text
-AI.Business.Playground/Lesson05.McpFundamentals/bin/Debug/net10.0/Lesson05.McpFundamentals
-```
-
 The MCP server uses **standard input/output transport**.
 
 Normally, you do not launch it directly for testing. Instead, an MCP client such as MCP Inspector launches the process and communicates with it.

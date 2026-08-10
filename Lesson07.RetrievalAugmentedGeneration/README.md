@@ -172,8 +172,10 @@ Lesson07.RetrievalAugmentedGeneration/
 │       └── RagOptions.cs
 │
 ├── Knowledge/
+│   ├── appeal-procedures.md
 │   ├── client-communication.md
-│   └── hearing-preparation.md
+│   ├── hearing-preparation.md
+│   └── valuation-guidelines.md
 │
 ├── Program.cs
 ├── appsettings.json
@@ -335,11 +337,53 @@ Examples:
 
 ```text
 Knowledge/
+├── appeal-procedures.md
 ├── client-communication.md
-└── hearing-preparation.md
+├── hearing-preparation.md
+└── valuation-guidelines.md
 ```
 
 The files are intentionally fictional internal business policy rather than external law or jurisdiction-specific guidance.
+
+Example `appeal-procedures.md`:
+
+```markdown
+# Appeal Procedures
+
+## Filing Deadlines
+
+An appeal must be submitted before the applicable jurisdiction's
+filing deadline. Analysts should verify the current deadline before
+advising a client that an appeal can still be filed.
+
+## Hearing Scheduling
+
+After an appeal is filed, the jurisdiction may issue a hearing
+notice containing the hearing date, time, location, or remote
+meeting information.
+
+## Missed Hearings
+
+If a hearing cannot be attended, the analyst should follow the
+jurisdiction's procedure for requesting a reschedule rather than
+assuming the hearing will automatically be postponed.
+```
+
+Example `client-communication.md`:
+
+```markdown
+# Client Communication
+
+## Proposed Value Changes
+
+Analysts should not present a proposed assessed value reduction to
+the client as guaranteed.
+
+## Hearing Results
+
+A hearing result should be communicated to the client within one
+business day after the result becomes available.
+```
 
 Example `hearing-preparation.md`:
 
@@ -359,20 +403,29 @@ The assigned reviewer must examine the evidence package at least
 two business days before the hearing.
 ```
 
-Example `client-communication.md`:
+Example `valuation-guidelines.md`:
 
 ```markdown
-# Client Communication
+# Valuation Guidelines
 
-## Proposed Value Changes
+## Comparable Sales
 
-Analysts should not present a proposed assessed value reduction to
-the client as guaranteed.
+Comparable sales should be selected based on property type,
+location, size, condition, and transaction date. Analysts should
+document significant differences between the subject property and
+each comparable.
 
-## Hearing Results
+## Income Approach
 
-A hearing result should be communicated to the client within one
-business day after the result becomes available.
+For income-producing commercial properties, analysts should review
+rent, vacancy, operating expenses, and capitalization rates when
+the information is available.
+
+## Unsupported Adjustments
+
+Adjustments to comparable properties should have a documented
+basis. Analysts should not make arbitrary percentage adjustments
+solely to reach a desired valuation.
 ```
 
 Only a few documents are needed for the lesson.

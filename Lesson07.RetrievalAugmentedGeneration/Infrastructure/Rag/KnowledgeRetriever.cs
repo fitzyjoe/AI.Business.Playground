@@ -7,8 +7,7 @@ namespace Lesson07.RetrievalAugmentedGeneration.Infrastructure.Rag;
 public sealed class KnowledgeRetriever(
     VectorStore _vectorStore,
     IHostEnvironment _environment,
-    IOptions<RagOptions> _options,
-    IEmbeddingGenerator<string, Embedding<float>> _embeddingGenerator)
+    IOptions<RagOptions> _options)
 {
     private VectorStoreCollection<string, KnowledgeChunk>? _collection;
 
@@ -21,7 +20,7 @@ public sealed class KnowledgeRetriever(
                 new VectorStoreKeyProperty(nameof(KnowledgeChunk.Id), typeof(string)),
                 new VectorStoreDataProperty(nameof(KnowledgeChunk.Source), typeof(string)),
                 new VectorStoreDataProperty(nameof(KnowledgeChunk.Content), typeof(string)),
-                new VectorStoreVectorProperty(nameof(KnowledgeChunk.Embedding), typeof(ReadOnlyMemory<float>), _options.Value.EmbeddingDimensions)
+                new VectorStoreVectorProperty(nameof(KnowledgeChunk.Embedding), typeof(string), _options.Value.EmbeddingDimensions)
                 {
                     DistanceFunction = DistanceFunction.CosineSimilarity
                 }
@@ -45,15 +44,12 @@ public sealed class KnowledgeRetriever(
 
             foreach (var content in SplitIntoChunks(text))
             {
-                var vector = await _embeddingGenerator.GenerateVectorAsync(content, cancellationToken: cancellationToken);
-
                 await _collection.UpsertAsync(
                     new KnowledgeChunk
                     {
                         Id = $"{source}:{index++}",
                         Source = source,
-                        Content = content,
-                        Embedding = vector
+                        Content = content
                     },
                     cancellationToken);
             }

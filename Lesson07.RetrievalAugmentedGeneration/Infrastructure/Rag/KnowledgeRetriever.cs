@@ -65,7 +65,6 @@ public sealed class KnowledgeRetriever(
 
         var results = new List<KnowledgeSearchResult>();
 
-
         var searchResults = _collection.SearchAsync(query, _options.Value.TopResults, cancellationToken: cancellationToken);
         await foreach (var result in searchResults)
         {
@@ -79,8 +78,8 @@ public sealed class KnowledgeRetriever(
         return results;
     }
 
-    private static IEnumerable<string> SplitIntoChunks(
-        string document)
+    // if we knew the format for the documents we were indexing, we might be smarter about the chunking... for now I've left it to chunk by paragraphs.
+    private static IEnumerable<string> SplitIntoChunks(string document)
     {
         return document.Split(
             "\n\n",

@@ -128,6 +128,7 @@ public sealed class MessageHandler(
 	
 	private static string BuildRagContext(IReadOnlyList<KnowledgeSearchResult> results)
 	{
+		// for now, we always ask to return 3 (RagOptions.TopResults) docs, so this will not be 0... but we could incorporate a score threshold in the future
 		if (results.Count == 0)
 		{
 			return string.Empty;

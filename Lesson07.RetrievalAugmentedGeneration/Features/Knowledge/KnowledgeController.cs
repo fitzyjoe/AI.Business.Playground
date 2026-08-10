@@ -15,6 +15,11 @@ public sealed class KnowledgeController(
 		[FromQuery] string query,
 		CancellationToken cancellationToken)
 	{
+		if (string.IsNullOrWhiteSpace(query))
+		{
+			return BadRequest("query is required.");
+		}
+		
 		var results =
 			await _knowledgeRetriever.SearchAsync(
 				query,

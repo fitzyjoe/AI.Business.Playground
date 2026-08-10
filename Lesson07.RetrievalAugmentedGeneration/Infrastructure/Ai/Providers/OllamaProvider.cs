@@ -1,11 +1,11 @@
 using System.Diagnostics;
 using OllamaSharp;
-using Lesson06.ConsumingMcpServers.Features.Conversations;
-using Lesson06.ConsumingMcpServers.Infrastructure.Mcp;
+using Lesson07.RetrievalAugmentedGeneration.Features.Conversations;
+using Lesson07.RetrievalAugmentedGeneration.Infrastructure.Mcp;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Options;
 
-namespace Lesson06.ConsumingMcpServers.Infrastructure.Ai.Providers;
+namespace Lesson07.RetrievalAugmentedGeneration.Infrastructure.Ai.Providers;
 
 public sealed class OllamaProvider : IAiProvider
 {

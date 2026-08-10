@@ -1,6 +1,6 @@
 using ModelContextProtocol.Client;
 
-namespace Lesson06.ConsumingMcpServers.Infrastructure.Mcp;
+namespace Lesson07.RetrievalAugmentedGeneration.Infrastructure.Mcp;
 
 public sealed class PropertyMcpClient : IAsyncDisposable
 {

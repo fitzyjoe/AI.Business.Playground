@@ -1,6 +1,6 @@
-using Lesson06.ConsumingMcpServers.Infrastructure.Ai;
+using Lesson07.RetrievalAugmentedGeneration.Infrastructure.Ai;
 
-namespace Lesson06.ConsumingMcpServers.Features.Conversations;
+namespace Lesson07.RetrievalAugmentedGeneration.Features.Conversations;
 
 public sealed class MessageHandler(
 	IConversationRepository _conversationRepository,

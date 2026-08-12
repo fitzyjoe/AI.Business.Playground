@@ -818,28 +818,3 @@ The lesson is not:
 The lesson is:
 
 > **How to let AI participate in a business write workflow while keeping approval and execution under deterministic application control.**
-
----
-
-## Next Lesson
-
-Lesson09 introduces **Agents**.
-
-Lesson08 establishes:
-
-```text
-AI can read
-    ↓
-AI can retrieve knowledge
-    ↓
-AI can propose a write
-    ↓
-application controls approval/execution
-```
-
-Lesson09 then asks:
-
-```text
-What if the AI is given an objective and allowed to decide
-which tools and information sources it needs to accomplish it?
-```

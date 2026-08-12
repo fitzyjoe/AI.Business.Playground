@@ -14,6 +14,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lesson06.ConsumingMcpServer
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lesson07.RetrievalAugmentedGeneration", "Lesson07.RetrievalAugmentedGeneration\Lesson07.RetrievalAugmentedGeneration.csproj", "{9466350E-F4D6-4210-9790-A99253319A74}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lesson08.SafeWriteOperations", "Lesson08.SafeWriteOperations\Lesson08.SafeWriteOperations.csproj", "{4997A043-780A-4A36-B351-484B1F57DE36}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -48,5 +50,9 @@ Global
 		{9466350E-F4D6-4210-9790-A99253319A74}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{9466350E-F4D6-4210-9790-A99253319A74}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{9466350E-F4D6-4210-9790-A99253319A74}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4997A043-780A-4A36-B351-484B1F57DE36}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4997A043-780A-4A36-B351-484B1F57DE36}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4997A043-780A-4A36-B351-484B1F57DE36}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4997A043-780A-4A36-B351-484B1F57DE36}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

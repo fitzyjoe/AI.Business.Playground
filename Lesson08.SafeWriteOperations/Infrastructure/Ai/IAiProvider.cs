@@ -1,0 +1,8 @@
+namespace Lesson08.SafeWriteOperations.Infrastructure.Ai;
+
+public interface IAiProvider
+{
+	Task<AiChatResponse> SendAsync(
+		AiChatRequest request,
+		CancellationToken cancellationToken = default);
+}

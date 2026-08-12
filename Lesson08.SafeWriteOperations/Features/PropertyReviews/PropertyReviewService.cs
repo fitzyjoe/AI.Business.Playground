@@ -143,6 +143,7 @@ public sealed class PropertyReviewService(
         _pendingRepository.Update(pendingPropertyReview);
     }
 
+    // TODO: validation in the future could use MCP to validate that the parcel number actually exists
     private static void Validate(CreatePendingPropertyReviewRequest request)
     {
         if (string.IsNullOrWhiteSpace(request.ParcelNumber))

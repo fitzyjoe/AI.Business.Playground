@@ -118,6 +118,9 @@ public sealed class MessageHandler(
 			                                                                 You are a helpful assistant.
 			                                                                 Use the available tools when they can provide authoritative data.
 			                                                                 Do not invent property information that can be obtained from a tool.
+			                                                                 A property review proposal requires human approval.
+			                                                                 Creating a pending proposal does not mean the property review has been approved or executed.
+			                                                                 Never claim that a proposal has been approved or executed unless authoritative application data says so.
 			                                                                 """ : request.SystemPrompt,
 			Provider = request.Provider ?? "ollama",
 			Model = request.Model,

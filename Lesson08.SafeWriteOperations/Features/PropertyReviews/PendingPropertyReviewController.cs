@@ -6,6 +6,7 @@ namespace Lesson08.SafeWriteOperations.Features.PropertyReviews;
 [Route("api/pending-property-reviews")]
 public sealed class PendingPropertyReviewController(PropertyReviewService _service) : ControllerBase
 {
+    // TODO: These pending property review requests are not idempotent right now for simplicity even though the approval is idempotent
     [HttpPost]
     public ActionResult<PendingPropertyReview> Create(CreatePendingPropertyReviewRequest request)
     {
@@ -65,14 +66,6 @@ public sealed class PendingPropertyReviewController(PropertyReviewService _servi
         catch (InvalidOperationException exception)
         {
             return Conflict(
-                new
-                {
-                    message = exception.Message
-                });
-        }
-        catch (ArgumentException exception)
-        {
-            return BadRequest(
                 new
                 {
                     message = exception.Message

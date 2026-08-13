@@ -1,0 +1,790 @@
+# Lesson01.BasicPrompting
+
+## Basic Prompting with a Local LLM
+
+Lesson01 establishes the smallest useful end-to-end AI application in the course.
+
+The application accepts a prompt over HTTP, sends that prompt to a locally running Ollama model, waits for the model response, and returns the generated text together with basic response metadata.
+
+```text
+HTTP client
+    ↓
+POST /api/prompt
+    ↓
+Endpoint
+    ↓
+Handler
+    ↓
+IAiProvider
+    ↓
+OllamaProvider
+    ↓
+Ollama
+    ↓
+local LLM
+```
+
+The goal is not to introduce advanced prompting techniques. The goal is to create a clean, understandable vertical slice that connects application code to an LLM without coupling the feature directly to the Ollama SDK.
+
+---
+
+## Learning Goals
+
+By the end of Lesson01, you should understand:
+
+- how to expose a simple AI capability through an ASP.NET Core endpoint;
+- how a user prompt becomes an LLM request;
+- why provider-specific AI code should be isolated from feature code;
+- how dependency injection connects `Handler` to `IAiProvider`;
+- how application configuration supplies the Ollama endpoint and default model;
+- how streaming provider responses can be accumulated into one API response;
+- how cancellation flows from the HTTP request through to the model call;
+- how to return useful metadata such as the model name and request duration;
+- how a small vertical slice can serve as the foundation for more advanced AI behavior without over-engineering the first example.
+
+---
+
+## Prerequisites
+
+This lesson assumes:
+
+- .NET 10 is installed;
+- Ollama is installed and running locally;
+- the model configured in `appsettings.json` is available in Ollama.
+
+The current configuration uses:
+
+```json
+{
+  "Ollama": {
+    "Endpoint": "http://localhost:11434",
+    "Model": "gemma3:4b"
+  }
+}
+```
+
+You can verify your locally installed models with:
+
+```bash
+ollama list
+```
+
+If the configured model is missing, pull it before running the lesson:
+
+```bash
+ollama pull gemma3:4b
+```
+
+---
+
+## Project Structure
+
+```text
+Lesson01.BasicPrompting/
+├── Features/
+│   └── Models/
+│       └── Execute/
+│           ├── AiResponse.cs
+│           ├── Endpoint.cs
+│           ├── Handler.cs
+│           └── Request.cs
+├── Infrastructure/
+│   └── Ai/
+│       ├── IAiProvider.cs
+│       └── Providers/
+│           ├── OllamaOptions.cs
+│           └── OllamaProvider.cs
+├── Lesson01.BasicPrompting.csproj
+├── Program.cs
+├── appsettings.json
+└── README.md
+```
+
+The structure is deliberately small.
+
+The feature contains the HTTP request/response behavior. The infrastructure layer contains the Ollama-specific implementation.
+
+---
+
+## The API
+
+Lesson01 exposes one endpoint:
+
+```http
+POST /api/prompt
+```
+
+The request contains a single value:
+
+```json
+{
+  "prompt": "Explain what an API is in two sentences."
+}
+```
+
+The request model is intentionally minimal:
+
+```csharp
+public sealed class Request
+{
+    public required string Prompt { get; init; }
+}
+```
+
+There are no system prompts, temperature controls, model overrides, conversation IDs, tools, RAG, or structured-output settings in this lesson.
+
+The lesson begins with the simplest useful contract:
+
+```text
+prompt in
+    ↓
+model response out
+```
+
+---
+
+## Response
+
+The API returns an `AiResponse` containing:
+
+```text
+Text
+Model
+Duration
+```
+
+Conceptually:
+
+```json
+{
+  "text": "An API is a defined interface that allows software systems to communicate with one another...",
+  "model": "gemma3:4b",
+  "duration": "00:00:01.2345678"
+}
+```
+
+`Text` is the generated model response.
+
+`Model` identifies the Ollama model that handled the request.
+
+`Duration` records how long the provider call took from the application's perspective.
+
+The response metadata makes the endpoint more useful than returning a raw string because the caller can see which model ran and roughly how long generation took.
+
+---
+
+## Running the Lesson
+
+From the repository root:
+
+```bash
+dotnet run --project Lesson01.BasicPrompting
+```
+
+The application uses the ASP.NET Core URL configured for the project/environment. The examples below assume:
+
+```text
+http://localhost:5000
+```
+
+---
+
+## First Prompt
+
+Send a request with `curl`:
+
+```bash
+curl -X POST \
+  http://localhost:5000/api/prompt \
+  -H "Content-Type: application/json" \
+  -d '{
+    "prompt": "Explain what an API is in two sentences."
+  }'
+```
+
+A successful request follows this path:
+
+```text
+curl
+ ↓
+POST /api/prompt
+ ↓
+Request
+ ↓
+Handler
+ ↓
+IAiProvider.SendAsync(...)
+ ↓
+OllamaProvider
+ ↓
+Ollama
+ ↓
+model response
+ ↓
+AiResponse
+ ↓
+HTTP 200
+```
+
+---
+
+## Endpoint
+
+`Endpoint.cs` defines the HTTP boundary using a minimal API endpoint.
+
+Conceptually:
+
+```csharp
+app.MapPost(
+    "/api/prompt",
+    async (Request request, Handler handler, CancellationToken cancellationToken) =>
+    {
+        var response = await handler.Handle(request, cancellationToken);
+        return Results.Ok(response);
+    });
+```
+
+The endpoint is responsible for HTTP concerns:
+
+```text
+route
+request binding
+cancellation token
+HTTP response
+```
+
+It does not know how Ollama works.
+
+That separation matters even in a small lesson.
+
+---
+
+## Handler
+
+`Handler` represents the application-level use case.
+
+Its job is simple:
+
+```text
+receive Request
+    ↓
+call IAiProvider
+    ↓
+return AiResponse
+```
+
+The handler depends on:
+
+```csharp
+IAiProvider
+```
+
+rather than directly on:
+
+```text
+OllamaApiClient
+```
+
+That keeps provider-specific implementation details out of the feature.
+
+The lesson intentionally does not add extra service layers between the endpoint and the provider. There is no business logic here yet that would justify them.
+
+---
+
+## Why `IAiProvider` Exists
+
+The provider abstraction is small:
+
+```csharp
+public interface IAiProvider
+{
+    Task<AiResponse> SendAsync(
+        Request request,
+        CancellationToken cancellationToken = default);
+}
+```
+
+Its purpose is not abstraction for abstraction's sake.
+
+It creates a useful boundary:
+
+```text
+Feature code
+    ↓
+IAiProvider
+────────────────────────
+provider boundary
+────────────────────────
+OllamaProvider
+    ↓
+Ollama SDK
+```
+
+The feature asks for an AI response.
+
+The provider decides how to communicate with a particular model host.
+
+This means `Handler` does not need to know about:
+
+- `OllamaApiClient`;
+- Ollama chat request types;
+- Ollama message roles;
+- streaming response chunks;
+- Ollama endpoint configuration.
+
+---
+
+## OllamaProvider
+
+`OllamaProvider` is the concrete `IAiProvider` implementation.
+
+It receives:
+
+```text
+HttpClient
+IOptions<OllamaOptions>
+```
+
+and configures the Ollama client using the configured endpoint and default model.
+
+The provider creates a chat request containing one user message:
+
+```text
+Role: User
+Content: request.Prompt
+```
+
+Conceptually:
+
+```text
+Request.Prompt
+    ↓
+Ollama ChatRequest
+    ↓
+User message
+    ↓
+SelectedModel
+```
+
+No system message is added in this lesson.
+
+---
+
+## Streaming Internally, One Response Externally
+
+Ollama's chat API returns results as an asynchronous stream.
+
+The provider reads that stream:
+
+```csharp
+await foreach (var response in _ollama.ChatAsync(chatRequest, cancellationToken))
+```
+
+and accumulates the response chunks into a `StringBuilder`.
+
+Conceptually:
+
+```text
+Ollama chunk 1 ─┐
+Ollama chunk 2 ─┼─→ StringBuilder → complete text
+Ollama chunk 3 ─┘
+```
+
+The HTTP API itself does not stream to the caller in this lesson.
+
+Instead:
+
+```text
+provider receives stream
+    ↓
+provider assembles complete response
+    ↓
+API returns one AiResponse
+```
+
+This keeps the first lesson simple while still showing that the underlying model API may behave differently from the application's public API.
+
+---
+
+## Cancellation
+
+ASP.NET Core supplies a `CancellationToken` to the endpoint.
+
+That token is passed through:
+
+```text
+Endpoint
+ ↓
+Handler
+ ↓
+IAiProvider
+ ↓
+OllamaProvider
+ ↓
+Ollama ChatAsync
+```
+
+If the HTTP client disconnects or the request is cancelled, the model call can also be cancelled rather than continuing unnecessary work.
+
+This is a small implementation detail with an important production principle:
+
+> Long-running AI calls should participate in normal application cancellation behavior.
+
+---
+
+## Configuration
+
+The Ollama connection is configured in `appsettings.json`:
+
+```json
+{
+  "Ollama": {
+    "Endpoint": "http://localhost:11434",
+    "Model": "gemma3:4b"
+  }
+}
+```
+
+`Program.cs` binds the `Ollama` section to `OllamaOptions`:
+
+```text
+appsettings.json
+    ↓
+OllamaOptions
+    ↓
+OllamaProvider
+```
+
+The provider then uses:
+
+```text
+Endpoint
+    → HttpClient.BaseAddress
+
+Model
+    → OllamaApiClient.SelectedModel
+```
+
+The endpoint itself does not contain either value.
+
+That keeps runtime configuration out of feature code.
+
+---
+
+## Dependency Injection
+
+`Program.cs` registers the main pieces:
+
+```text
+Handler
+IAiProvider → OllamaProvider
+HttpClient
+OllamaOptions
+```
+
+At runtime:
+
+```text
+Endpoint asks for Handler
+    ↓
+DI creates Handler
+    ↓
+Handler asks for IAiProvider
+    ↓
+DI supplies OllamaProvider
+```
+
+This is the first important architectural boundary in the course:
+
+```text
+application behavior
+    ≠
+provider implementation
+```
+
+---
+
+## Vertical Slice Design
+
+The prompt feature is grouped together under:
+
+```text
+Features/Models/Execute/
+```
+
+The files involved in the use case are colocated:
+
+```text
+Request
+AiResponse
+Endpoint
+Handler
+```
+
+This makes it easy to follow the complete feature from HTTP request to application handler.
+
+Provider-specific code lives separately under:
+
+```text
+Infrastructure/Ai/
+```
+
+For this small application, that is enough structure.
+
+There is no need for a larger multi-project Clean Architecture layout or additional layers merely to forward one prompt to a model.
+
+---
+
+## Exercise 1 — Basic Question
+
+Try:
+
+```bash
+curl -X POST \
+  http://localhost:5000/api/prompt \
+  -H "Content-Type: application/json" \
+  -d '{
+    "prompt": "What is the difference between a class and an interface in C#?"
+  }'
+```
+
+Verify that the response includes:
+
+```text
+text
+model
+duration
+```
+
+---
+
+## Exercise 2 — Ask for a Specific Format
+
+Prompt wording alone can influence the response format:
+
+```bash
+curl -X POST \
+  http://localhost:5000/api/prompt \
+  -H "Content-Type: application/json" \
+  -d '{
+    "prompt": "Explain dependency injection using exactly three bullet points."
+  }'
+```
+
+Observe whether the model follows the instruction.
+
+This is still ordinary natural-language prompting. The application has not added any structured-output enforcement.
+
+---
+
+## Exercise 3 — Compare Two Runs
+
+Send the same request more than once:
+
+```bash
+curl -X POST \
+  http://localhost:5000/api/prompt \
+  -H "Content-Type: application/json" \
+  -d '{
+    "prompt": "Give me three names for a software consulting company."
+  }'
+```
+
+Compare the responses.
+
+Depending on the model and its defaults, the exact wording may vary.
+
+The important observation is that an LLM is not a deterministic function in the same sense as ordinary application code.
+
+---
+
+## Exercise 4 — Observe Response Time
+
+Try a short request:
+
+```text
+Answer with one word: what color is the sky on a clear day?
+```
+
+Then try a more substantial request:
+
+```text
+Explain the differences between REST, GraphQL, and gRPC and give one business use case for each.
+```
+
+Compare the `duration` values.
+
+Generation time can vary based on factors such as:
+
+- response length;
+- model size;
+- local hardware;
+- model warm-up state;
+- concurrent workload.
+
+`Duration` is therefore useful operational metadata, even in a teaching example.
+
+---
+
+## Exercise 5 — Stop Ollama
+
+Stop or otherwise make Ollama unavailable, then call the endpoint again.
+
+Observe that the application cannot produce a model response when its provider dependency is unavailable.
+
+This reinforces another important boundary:
+
+```text
+ASP.NET application
+    ↓
+external model runtime
+```
+
+Even though Ollama is running locally, it is still an external dependency from the application's perspective.
+
+---
+
+## What This Lesson Does Not Guarantee
+
+A prompt such as:
+
+```text
+Return exactly three bullet points.
+```
+
+is an instruction to the model, not a deterministic application constraint.
+
+The model may usually follow it, but ordinary prompting does not provide the same guarantees as normal typed application code.
+
+Lesson01 therefore treats the model response as generated text:
+
+```text
+string in
+    ↓
+LLM
+    ↓
+string out
+```
+
+That is sufficient for establishing the basic integration path.
+
+---
+
+## Error Handling
+
+Lesson01 keeps error handling deliberately minimal.
+
+The endpoint declares a possible `500 Internal Server Error`, but the project does not yet add custom exception handlers or provider-specific error translation.
+
+Examples of failures that can surface include:
+
+```text
+Ollama is not running
+configured model is missing
+configured endpoint is incorrect
+request is cancelled
+provider call fails
+```
+
+The goal is to understand the successful AI request path before adding more elaborate error-handling infrastructure.
+
+---
+
+## Deliberately Out of Scope
+
+Lesson01 does not add:
+
+- conversation history;
+- conversation IDs;
+- system prompts as a separate API field;
+- temperature controls;
+- max-token controls;
+- per-request model selection;
+- multiple AI providers;
+- tool calling;
+- MCP;
+- RAG;
+- embeddings;
+- vector search;
+- structured outputs;
+- JSON Schema enforcement;
+- agents;
+- write operations;
+- authentication;
+- persistent storage;
+- retries or resilience policies;
+- streaming HTTP responses;
+- production observability.
+
+Those concepts are intentionally absent so the first AI integration remains easy to understand.
+
+---
+
+## Testing Strategy
+
+This lesson is simple enough to test manually with `curl`.
+
+Useful checks include:
+
+```text
+POST /api/prompt returns HTTP 200 when Ollama is available
+response text is non-empty
+response model matches the configured Ollama model
+response duration is populated
+cancellation is propagated
+```
+
+Because the response text is generated by an LLM, tests should generally avoid asserting one exact natural-language answer.
+
+A better assertion is usually about the application contract:
+
+```text
+Did a response arrive?
+Was the expected model used?
+Was metadata returned?
+Did failures propagate appropriately?
+```
+
+---
+
+## Lesson01 Acceptance Criteria
+
+Lesson01 is complete when:
+
+```text
+✓ the application starts successfully
+✓ POST /api/prompt accepts a JSON prompt
+✓ Handler delegates the request through IAiProvider
+✓ OllamaProvider sends the prompt to the configured local model
+✓ the complete generated response is returned to the caller
+✓ the response includes model metadata
+✓ the response includes request duration
+✓ cancellation flows through the request path
+✓ feature code does not directly depend on the Ollama SDK
+```
+
+---
+
+## What Lesson01 Is Really Teaching
+
+The code is small, but it establishes an important architectural pattern:
+
+```text
+HTTP API
+    ↓
+application feature
+    ↓
+provider abstraction
+    ↓
+AI runtime
+```
+
+The important takeaway is not simply:
+
+> Call Ollama from C#.
+
+It is:
+
+> **Treat the LLM as an external application capability behind a small, explicit boundary.**
+
+That keeps the first integration easy to reason about while leaving the application free to evolve without embedding provider-specific SDK details directly into its feature code.

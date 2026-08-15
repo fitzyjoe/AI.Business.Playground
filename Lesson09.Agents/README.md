@@ -12,7 +12,9 @@ POST /api/message
 
 What changes is the implementation behind that endpoint.
 
-Earlier lessons manually maintained conversation messages and replayed the full history to the LLM. Lesson09 replaces that hand-built message-history orchestration with an Agent Framework `AgentSession`.
+Earlier lessons manually maintained conversation messages and replayed the full history to the LLM. Lesson09 replaces that
+hand-built message-history orchestration with an Agent Framework `AgentSession` while preserving the provider abstraction
+introduced earlier in the course.
 
 ```text
 /api/message
@@ -25,12 +27,19 @@ AgentSession
     ↓
 PropertyReviewAgent
     ↓
+IAiProviderFactory
+    ↓
+IAiProvider
+    ↓
+IChatClient
+    ↓
 ChatClientAgent
     ↓
 MCP tools + knowledge-search tool + proposal tool
 ```
 
-The application still owns the conversation ID and business configuration. Agent Framework owns the conversational session state used by the agent.
+The application still owns conversation identity, provider selection, business configuration, persistence, and approval boundaries.
+Agent Framework owns the conversational session state and agent invocation.
 
 ---
 
@@ -55,6 +64,7 @@ Lesson08
 application owns message history
 application always performs RAG
 LLM chooses property/proposal tools
+IAiProvider owns the chat execution loop
 ```
 
 ```text
@@ -63,9 +73,12 @@ Lesson09
 AgentSession owns agent conversation history
 internal knowledge search becomes an agent tool
 agent chooses property/RAG/proposal tools
+ChatClientAgent owns the agent execution loop
+IAiProvider supplies the provider-specific IChatClient
 ```
 
-Agent Framework gives that behavior an explicit `ChatClientAgent` and `AgentSession` abstraction.
+Agent Framework gives the model/tool behavior explicit `ChatClientAgent` and `AgentSession` abstractions without eliminating
+our application-level provider boundary.
 
 ---
 
@@ -74,32 +87,21 @@ Agent Framework gives that behavior an explicit `ChatClientAgent` and `AgentSess
 By the end of this lesson, you should understand:
 
 - how a `ChatClientAgent` sits on top of an `IChatClient`;
-- how one agent can participate in many independent conversations;
+- how `IAiProvider` can expose a provider-specific `IChatClient` without owning a second chat loop;
+- how `IAiProviderFactory` allows a conversation to select an AI provider;
+- how one agent definition can participate in many independent conversations;
 - how `AgentSession` can hold the conversational state for one conversation;
 - why the application can still own the external `conversationId`;
 - how serialized agent-session state can be stored with an application conversation record;
 - how RAG can move from an application-mandated step to an agent-selectable tool;
 - how MCP tools and local `AIFunction` tools can coexist in one agent;
-- why a model/tool loop from an earlier lesson was already agent-like behavior;
 - why tool availability is a stronger safety boundary than prompt instructions alone.
 
 ---
 
 ## The Core Model
 
-There are three different concepts in this lesson.
-
-### `PropertyReviewAgent`
-
-The agent defines:
-
-```text
-instructions
-model client
-available capabilities
-```
-
-There is one application-level `PropertyReviewAgent` service.
+There are several distinct responsibilities in this lesson.
 
 ### `Conversation`
 
@@ -119,29 +121,11 @@ UpdatedAt
 
 The application uses `Conversation.Id` as the public conversation identifier.
 
+`Conversation.Provider` determines which registered `IAiProvider` should supply the model client.
+
 ### `AgentSession`
 
 `AgentSession` contains the framework-owned state for one ongoing interaction with the agent.
-
-Conceptually:
-
-```text
-                  PropertyReviewAgent
-                         │
-            ┌────────────┼────────────┐
-            ↓            ↓            ↓
-     Conversation A Conversation B Conversation C
-            │            │            │
-      AgentSession A AgentSession B AgentSession C
-```
-
-A conversation is not an agent.
-
-A conversation is one ongoing interaction with an agent.
-
----
-
-## Why We No Longer Store `Conversation.Messages`
 
 Earlier lessons stored:
 
@@ -149,11 +133,7 @@ Earlier lessons stored:
 Conversation.Messages
 ```
 
-and rebuilt the complete message list for every provider request.
-
-Lesson09 removes that duplicate history model.
-
-Instead:
+Lesson09 instead stores serialized Agent Framework session state:
 
 ```text
 AgentSession
@@ -177,17 +157,182 @@ AgentSession
 agent continues the conversation
 ```
 
-The application does not independently maintain a second copy of the agent's chat history.
+`AgentSession` replaces the message-history responsibility of `Conversation`; it does not replace the application's conversation
+record itself.
+
+### `InMemoryConversationRepository`
+
+The repository stores application `Conversation` records by `conversationId`.
+
+Conceptually:
+
+```text
+InMemoryConversationRepository
+        │
+        ├── Conversation A ──→ serialized AgentSession A
+        ├── Conversation B ──→ serialized AgentSession B
+        └── Conversation C ──→ serialized AgentSession C
+```
+
+The repository answers:
+
+> Which application conversation corresponds to this ID?
+
+The `AgentSession` answers:
+
+> What conversational state does the agent need to continue that conversation?
+
+---
+
+## Provider Abstraction
+
+Agent Framework consumes the standard `Microsoft.Extensions.AI.IChatClient` abstraction.
+
+Lesson09 preserves our own provider-selection layer above it:
+
+```text
+Conversation.Provider
+        ↓
+IAiProviderFactory
+        ↓
+IAiProvider
+        ↓
+IChatClient
+        ↓
+ChatClientAgent
+```
+
+`IAiProvider` is deliberately smaller than it was in earlier lessons:
+
+```csharp
+public interface IAiProvider
+{
+    string Name { get; }
+    string DefaultModel { get; }
+    IChatClient ChatClient { get; }
+}
+```
+
+It no longer has a custom `SendAsync()` method because Agent Framework now owns the chat/agent execution loop.
+
+The provider abstraction instead owns provider-specific construction and defaults.
+
+### `OllamaProvider`
+
+The current lesson includes one implementation:
+
+```text
+OllamaProvider
+    ↓
+OllamaApiClient
+    ↓
+IChatClient
+```
+
+`OllamaProvider` exposes:
+
+```text
+Name = "ollama"
+DefaultModel = configured Ollama model
+ChatClient = OllamaApiClient
+```
+
+### `AiProviderFactory`
+
+The factory resolves providers by name:
+
+```text
+"ollama"
+    ↓
+OllamaProvider
+```
+
+A future provider can implement the same `IAiProvider` contract and be registered with dependency injection without changing
+`MessageHandler` or the agent's tool logic.
+
+Only Ollama is implemented in this lesson, but the architecture is no longer hard-wired to Ollama inside `PropertyReviewAgent`.
+
+---
+
+## `PropertyReviewAgent`
+
+`PropertyReviewAgent` owns the Agent Framework integration.
+
+It receives:
+
+```text
+IAiProviderFactory
+Property MCP tools
+KnowledgeTools
+PropertyReviewTools
+```
+
+For each conversation it resolves the selected provider:
+
+```text
+Conversation.Provider
+    ↓
+IAiProviderFactory.GetProvider(...)
+    ↓
+IAiProvider
+```
+
+The provider supplies an `IChatClient`, which is then used by a `ChatClientAgent`.
+
+The agent instances are cached per provider:
+
+```text
+PropertyReviewAgent
+    ├── ollama → ChatClientAgent using OllamaProvider.ChatClient
+    └── another provider → another ChatClientAgent
+```
+
+Each conversation still gets its own `AgentSession`.
+
+That distinction is important:
+
+```text
+ChatClientAgent
+    = agent definition + model client + tools
+
+AgentSession
+    = one conversation's framework-owned state
+```
+
+---
+
+## Conversation-Level Model Selection
+
+A conversation can optionally specify a model when it is created.
+
+If no model is supplied:
+
+```text
+Conversation.Model
+    = null
+        ↓
+IAiProvider.DefaultModel
+```
+
+If a model is supplied:
+
+```text
+Conversation.Model
+    ↓
+ChatOptions.ModelId
+```
+
+This preserves the earlier lesson behavior while moving the actual model request through Agent Framework.
 
 ---
 
 ## Agent Capabilities
 
-The agent receives four categories of capability.
+The agent receives the existing property MCP tools plus two local functions.
 
 ### Property MCP tools
 
-The existing `PropertyMcpClient` supplies tools from the Lesson05 MCP server, including property lookup/search operations.
+`PropertyMcpClient` supplies property lookup/search operations from the Lesson05 MCP server.
 
 ### Internal knowledge search
 
@@ -197,11 +342,11 @@ Lesson09 exposes `KnowledgeRetriever.SearchAsync(...)` as:
 search_internal_knowledge
 ```
 
-The agent can decide whether internal knowledge is relevant to the user's request.
+The agent decides whether internal company knowledge is relevant to the current request.
 
 ### Property-review proposal
 
-The existing `PropertyReviewTools` exposes:
+`PropertyReviewTools` exposes:
 
 ```text
 propose_property_review
@@ -219,7 +364,8 @@ reject_property_review
 execute_property_review
 ```
 
-That is intentional.
+The instructions also tell the agent that approval requires the application/human workflow, but the stronger protection is that
+those capabilities were never delegated to the agent.
 
 ---
 
@@ -252,8 +398,6 @@ human/application approval
 PropertyReview
 ```
 
-The instructions also tell the agent that approval requires the application/human workflow, but the stronger protection is that no approval tool is supplied to the agent.
-
 ---
 
 ## RAG Changes in Lesson09
@@ -266,15 +410,13 @@ KnowledgeRetriever.SearchAsync(userMessage)
 
 for every message.
 
-The application decided that RAG would always happen.
-
 In Lesson09, retrieval becomes another capability:
 
 ```text
 search_internal_knowledge
 ```
 
-Now the model can decide:
+The model can now decide:
 
 ```text
 Do I need authoritative property data?
@@ -283,7 +425,7 @@ Do I need to propose a review?
 Do I already have enough information to answer?
 ```
 
-This is a change in **who chooses retrieval**, not a magical difference between an "LLM" and an "agent."
+This is a change in **who chooses retrieval**, not a magical distinction between an "LLM" and an "agent."
 
 ---
 
@@ -301,7 +443,7 @@ A new conversation starts when `conversationId` is omitted.
 
 An existing conversation continues when `conversationId` is supplied.
 
-Conversation-level settings can only be supplied when starting the conversation, preserving the behavior from the earlier conversation lesson.
+Provider, model, temperature, max-token, and system-prompt settings can only be supplied when starting a conversation.
 
 ---
 
@@ -342,16 +484,7 @@ curl -s \
   }' | jq .
 ```
 
-The response includes the conversation ID:
-
-```json
-{
-  "conversationId": "...",
-  "content": "...",
-  "model": "qwen3:8b",
-  "duration": "..."
-}
-```
+A response includes the conversation ID, generated content, model, and duration.
 
 For this request, the agent should be able to choose a property MCP tool.
 
@@ -359,7 +492,7 @@ For this request, the agent should be able to choose a property MCP tool.
 
 ## Exercise 2 — Prove the Agent Conversation Has History
 
-Store the conversation ID from the first response:
+Store the conversation ID:
 
 ```bash
 CONVERSATION_ID=$(
@@ -389,7 +522,7 @@ curl -s \
 
 The agent should understand that `that property` refers to the parcel from the previous turn.
 
-This history now comes from the restored `AgentSession`, not from `Conversation.Messages` being replayed by `MessageHandler`.
+That history comes from the restored `AgentSession`, not from `Conversation.Messages` being replayed by `MessageHandler`.
 
 ---
 
@@ -405,19 +538,13 @@ curl -s \
   }' | jq .
 ```
 
-The agent can choose:
-
-```text
-search_internal_knowledge
-```
-
-because this is a company-guidance question.
+The agent can choose `search_internal_knowledge` because this is a company-guidance question.
 
 Unlike Lesson08, `MessageHandler` does not automatically perform the vector search first.
 
 ---
 
-## Exercise 4 — MCP + Knowledge Search in One Conversation
+## Exercise 4 — MCP + Knowledge Search
 
 ```bash
 curl -s \
@@ -429,7 +556,7 @@ curl -s \
   }' | jq .
 ```
 
-A reasonable tool sequence is:
+A reasonable model-selected sequence is:
 
 ```text
 property MCP lookup
@@ -438,8 +565,6 @@ search_internal_knowledge
     ↓
 answer
 ```
-
-The exact order is model-selected.
 
 ---
 
@@ -458,20 +583,16 @@ curl -s \
 Inspect pending proposals:
 
 ```bash
-curl -s \
-  http://localhost:5000/api/pending-property-reviews | jq .
+curl -s http://localhost:5000/api/pending-property-reviews | jq .
 ```
 
 Then inspect executed reviews:
 
 ```bash
-curl -s \
-  http://localhost:5000/api/property-reviews | jq .
+curl -s http://localhost:5000/api/property-reviews | jq .
 ```
 
-The pending proposal may exist.
-
-No executed `PropertyReview` should have been created by the agent.
+The pending proposal may exist. No executed `PropertyReview` should have been created by the agent.
 
 ---
 
@@ -487,9 +608,7 @@ curl -s \
   }' | jq .
 ```
 
-The agent may create a pending proposal.
-
-It cannot approve it because no approval tool exists in its capability set.
+The agent may create a pending proposal. It cannot approve it because no approval tool exists in its capability set.
 
 Approval remains application-controlled:
 
@@ -501,9 +620,9 @@ curl -s \
 
 ---
 
-## Exercise 7 — Conversation-Level Model Settings Still Work
+## Exercise 7 — Explicit Provider and Model Settings
 
-Start a conversation with explicit settings:
+Start a conversation using the registered Ollama provider:
 
 ```bash
 curl -s \
@@ -512,20 +631,55 @@ curl -s \
   -H "Content-Type: application/json" \
   -d '{
     "content": "Explain the purpose of a property assessment review.",
+    "provider": "ollama",
     "temperature": 0.2,
     "maxTokens": 250
   }' | jq .
 ```
 
-Those settings are stored on the application `Conversation` and applied through `ChatClientAgentRunOptions` each time that conversation runs.
+Because no model was supplied, `OllamaProvider.DefaultModel` is used.
 
-As before, conversation-level settings cannot be changed by supplying them alongside an existing `conversationId`.
+You can also override the model for a new conversation:
+
+```bash
+curl -s \
+  -X POST \
+  http://localhost:5000/api/message \
+  -H "Content-Type: application/json" \
+  -d '{
+    "content": "Explain the purpose of a property assessment review.",
+    "provider": "ollama",
+    "model": "qwen3:8b"
+  }' | jq .
+```
+
+Conversation-level settings cannot be changed alongside an existing `conversationId`.
 
 ---
 
-## Exercise 8 — Optional Conversation Instructions
+## Exercise 8 — Unsupported Provider
 
-A conversation may still supply its own additional system instructions when it is created:
+Only Ollama is registered in this lesson.
+
+Try:
+
+```bash
+curl -i \
+  -X POST \
+  http://localhost:5000/api/message \
+  -H "Content-Type: application/json" \
+  -d '{
+    "content": "Hello.",
+    "provider": "not-a-provider"
+  }'
+```
+
+`AiProviderFactory` should reject the unsupported provider rather than allowing `PropertyReviewAgent` to contain
+provider-specific branching logic.
+
+---
+
+## Exercise 9 — Optional Conversation Instructions
 
 ```bash
 curl -s \
@@ -538,7 +692,7 @@ curl -s \
   }' | jq .
 ```
 
-The agent retains its application-defined safety and capability instructions. The conversation prompt supplies additional per-conversation guidance.
+The agent retains its application-defined safety and capability instructions. The conversation prompt supplies additional guidance.
 
 ---
 
@@ -558,7 +712,7 @@ append both messages
 save conversation
 ```
 
-Lesson09 reduces its responsibility to approximately:
+Lesson09 reduces its responsibility to:
 
 ```text
 load/create Conversation
@@ -572,59 +726,48 @@ serialize updated AgentSession
 save Conversation
 ```
 
-That is the architectural payoff of the lesson.
+The handler does not choose an AI SDK or build a provider-specific chat request.
 
 ---
 
-## `PropertyReviewAgent`
-
-`PropertyReviewAgent` owns the Agent Framework integration.
-
-It creates the `ChatClientAgent` with:
+## Responsibilities After the Refactor
 
 ```text
-Ollama IChatClient
-agent instructions
-MCP property tools
-search_internal_knowledge
-propose_property_review
+MessageHandler
+    → conversation lifecycle
+
+InMemoryConversationRepository
+    → application conversation storage
+
+AgentSession
+    → framework-owned conversation state/history
+
+PropertyReviewAgent
+    → instructions, tools, Agent Framework integration
+
+IAiProviderFactory
+    → provider selection
+
+IAiProvider
+    → provider-specific IChatClient + default model
+
+OllamaProvider
+    → Ollama-specific client construction
+
+ChatClientAgent
+    → agent invocation/tool loop
 ```
 
-It also provides the application with methods for:
+This avoids two undesirable extremes:
 
 ```text
-CreateSessionAsync
-DeserializeSessionAsync
-RunAsync
-SerializeSessionAsync
+PropertyReviewAgent directly hard-wired to Ollama
 ```
 
-The handler therefore does not need to know how Agent Framework represents its session state.
-
----
-
-## Conversation Settings vs. Agent Instructions
-
-The agent has application-defined instructions that establish its role and safety rules.
-
-The conversation can additionally store:
+and:
 
 ```text
-SystemPrompt
-Provider
-Model
-Temperature
-MaxTokens
-```
-
-Those settings are applied to each run of that conversation.
-
-This keeps two different concerns separate:
-
-```text
-agent-level invariant behavior
-    ≠
-conversation-level configuration
+our own IAiProvider reimplementing the chat loop that Agent Framework already provides
 ```
 
 ---
@@ -633,21 +776,10 @@ conversation-level configuration
 
 The lesson serializes `AgentSession` into the `Conversation` record, but the conversation repository is still in memory.
 
-Therefore:
+Therefore the session is serializable, but Lesson09 conversations do not survive application restart.
 
-```text
-AgentSession is serializable
-```
-
-but:
-
-```text
-Lesson09 conversations do not survive application restart
-```
-
-because `InMemoryConversationRepository` is intentionally still used.
-
-A production application could persist the serialized session state in a database without changing the public `/api/message` contract.
+A production implementation could persist the serialized session state in a database without changing the public
+`POST /api/message` contract.
 
 ---
 
@@ -655,6 +787,7 @@ A production application could persist the serialized session state in a databas
 
 Lesson09 does not add:
 
+- a second concrete LLM provider implementation;
 - multiple cooperating agents;
 - supervisor agents;
 - agent handoffs;
@@ -667,7 +800,7 @@ Lesson09 does not add:
 - arbitrary file-write tools;
 - production authentication or RBAC.
 
-The lesson focuses on one important evolution: **turn the existing conversation experience into an agent-backed conversation without creating a second parallel interaction model.**
+The provider boundary is present and switchable, but Ollama is the only implementation included in this lesson.
 
 ---
 
@@ -683,22 +816,25 @@ Lesson09 is complete when:
 ✓ AgentSession is serialized into Conversation.AgentSessionState
 ✓ restored AgentSession provides multi-turn history
 ✓ PropertyReviewAgent uses ChatClientAgent
+✓ PropertyReviewAgent does not directly construct OllamaApiClient
+✓ IAiProvider exposes Name, DefaultModel, and IChatClient
+✓ IAiProviderFactory selects the provider from Conversation.Provider
+✓ OllamaProvider owns Ollama-specific chat-client construction
+✓ Conversation.Model overrides the provider default model when supplied
 ✓ existing MCP property tools are available to the agent
 ✓ internal knowledge retrieval is available as search_internal_knowledge
 ✓ the agent chooses whether knowledge retrieval is needed
 ✓ propose_property_review remains available
 ✓ approve/reject/execute are not agent capabilities
 ✓ existing HTTP approval flow still works
-✓ model, temperature, max-token, and optional system-prompt settings remain conversation-level
+✓ temperature, max-token, and optional system-prompt settings remain conversation-level
 ```
 
 ---
 
 ## Key Takeaway
 
-Lesson09 is not a restart from conversations.
-
-It is an evolution of them:
+Lesson09 is an evolution of the existing conversation architecture:
 
 ```text
 hand-built conversation orchestration
@@ -706,16 +842,19 @@ hand-built conversation orchestration
 agent-backed conversation orchestration
 ```
 
+But Agent Framework does not eliminate every application abstraction.
+
 The application still owns:
 
 ```text
 conversation identity
+provider selection
 business configuration
 persistence boundary
 approval boundary
 ```
 
-Agent Framework now owns:
+Agent Framework owns:
 
 ```text
 agent session/history
@@ -723,4 +862,14 @@ agent invocation
 model-selected use of allowed capabilities
 ```
 
-The agent can decide how to use its capabilities, but the application still decides which capabilities exist at all.
+And `IChatClient` becomes the handoff point between our provider abstraction and Agent Framework:
+
+```text
+IAiProvider
+    ↓
+IChatClient
+    ↓
+ChatClientAgent
+```
+
+That lets the application remain provider-neutral without maintaining a second, competing chat-execution pipeline.

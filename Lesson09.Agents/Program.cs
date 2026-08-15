@@ -4,6 +4,7 @@ using Lesson09.Agents.Features.Agents;
 using Lesson09.Agents.Features.Conversations;
 using Lesson09.Agents.Features.Knowledge;
 using Lesson09.Agents.Features.PropertyReviews;
+using Lesson09.Agents.Infrastructure.Ai;
 using Lesson09.Agents.Infrastructure.Ai.Providers;
 using Lesson09.Agents.Infrastructure.Conversations;
 using Lesson09.Agents.Infrastructure.ErrorHandling;
@@ -52,7 +53,7 @@ builder.Services.AddControllers()
 	});
 
 builder.Services.AddHttpClient(
-	"OllamaAgent",
+	"OllamaChat",
 	(serviceProvider, httpClient) =>
 	{
 		var options = serviceProvider
@@ -72,6 +73,9 @@ builder.Services.AddHttpClient(
 
 		httpClient.BaseAddress = new Uri(options.Endpoint);
 	});
+
+builder.Services.AddSingleton<IAiProvider, OllamaProvider>();
+builder.Services.AddSingleton<IAiProviderFactory, AiProviderFactory>();
 
 builder.Services.AddTransient<MessageHandler>();
 builder.Services.AddSingleton<IConversationRepository, InMemoryConversationRepository>();

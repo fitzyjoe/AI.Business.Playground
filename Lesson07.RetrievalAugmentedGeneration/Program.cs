@@ -69,8 +69,7 @@ builder.Services.AddTransient<MessageHandler>();
 builder.Services.AddSingleton<IConversationRepository, InMemoryConversationRepository>();
 builder.Services.AddSingleton<PropertyMcpClient>();
 
-builder.Services.AddSingleton<
-	IEmbeddingGenerator<string, Embedding<float>>>(
+builder.Services.AddSingleton<IEmbeddingGenerator<string, Embedding<float>>>(
 	serviceProvider =>
 	{
 		var httpClient = serviceProvider

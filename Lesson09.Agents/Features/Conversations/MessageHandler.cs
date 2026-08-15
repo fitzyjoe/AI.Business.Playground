@@ -29,13 +29,16 @@ public sealed class MessageHandler(
 			}
 
 			session = await _propertyReviewAgent.DeserializeSessionAsync(
+				conversation,
 				conversation.AgentSessionState.Value,
 				cancellationToken);
 		}
 		else
 		{
 			conversation = CreateConversation(messageRequest);
-			session = await _propertyReviewAgent.CreateSessionAsync(cancellationToken);
+			session = await _propertyReviewAgent.CreateSessionAsync(
+				conversation,
+				cancellationToken);
 		}
 
 		var agentResponse = await _propertyReviewAgent.RunAsync(
@@ -45,6 +48,7 @@ public sealed class MessageHandler(
 			cancellationToken);
 
 		conversation.AgentSessionState = await _propertyReviewAgent.SerializeSessionAsync(
+			conversation,
 			session,
 			cancellationToken);
 		conversation.UpdatedAt = DateTimeOffset.UtcNow;

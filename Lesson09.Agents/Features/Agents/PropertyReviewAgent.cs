@@ -118,7 +118,7 @@ public sealed class PropertyReviewAgent
 			ModelId = model,
 			Temperature = conversation.Temperature,
 			MaxOutputTokens = conversation.MaxTokens,
-			Instructions = conversation.SystemPrompt
+			Instructions = BuildInstructions(conversation.SystemPrompt)
 		};
 
 		var runOptions = new ChatClientAgentRunOptions(chatOptions);
@@ -136,5 +136,21 @@ public sealed class PropertyReviewAgent
 			response.Text,
 			model,
 			stopwatch.Elapsed);
+	}
+
+	private static string BuildInstructions(string? conversationInstructions)
+	{
+		if (string.IsNullOrWhiteSpace(conversationInstructions))
+		{
+			return Instructions;
+		}
+
+		return
+			$"""
+			{Instructions}
+
+			Additional instructions for this conversation:
+			{conversationInstructions}
+			""";
 	}
 }

@@ -36,7 +36,7 @@ public sealed class PropertyReviewAgent
 		""";
 
 	private readonly IAiProviderFactory _aiProviderFactory;
-	private readonly IList<AITool> _tools;
+	private readonly AITool[] _tools;
 	private readonly ILoggerFactory _loggerFactory;
 	private readonly ConcurrentDictionary<string, ChatClientAgent> _agents =
 		new(StringComparer.OrdinalIgnoreCase);

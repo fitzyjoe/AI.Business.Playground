@@ -1,9 +1,9 @@
-﻿using System.Text.Json.Serialization;
+using System.Text.Json.Serialization;
 using CommunityToolkit.VectorData.InMemory;
-using Lesson09.Agents.Features.Conversations;
-using Lesson09.Agents.Features.PropertyReviews;
 using Lesson09.Agents.Features.Agents;
+using Lesson09.Agents.Features.Conversations;
 using Lesson09.Agents.Features.Knowledge;
+using Lesson09.Agents.Features.PropertyReviews;
 using Lesson09.Agents.Infrastructure.Ai;
 using Lesson09.Agents.Infrastructure.Ai.Providers;
 using Lesson09.Agents.Infrastructure.Conversations;
@@ -36,8 +36,7 @@ builder.Services
 	.AddOptions<RagOptions>()
 	.Bind(builder.Configuration.GetSection("Rag"))
 	.Validate(
-		options =>
-			!string.IsNullOrWhiteSpace(options.EmbeddingModel),
+		options => !string.IsNullOrWhiteSpace(options.EmbeddingModel),
 		"EmbeddingModel is required.")
 	.Validate(
 		options => options.EmbeddingDimensions > 0,
@@ -53,39 +52,11 @@ builder.Services.AddControllers()
 		options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
 	});
 
-builder.Services.AddHttpClient<OllamaProvider>(
-	(serviceProvider, httpClient) =>
-	{
-		var options = serviceProvider
-			.GetRequiredService<IOptions<OllamaOptions>>()
-			.Value;
+builder.Services.AddHttpClient();
 
-		httpClient.BaseAddress = new Uri(options.Endpoint);
-	});
+builder.Services.AddSingleton<IAiProvider, OllamaProvider>();
+builder.Services.AddSingleton<IAiProviderFactory, AiProviderFactory>();
 
-builder.Services.AddHttpClient(
-	"OllamaEmbeddings",
-	(serviceProvider, httpClient) =>
-	{
-		var options = serviceProvider
-			.GetRequiredService<IOptions<OllamaOptions>>()
-			.Value;
-
-		httpClient.BaseAddress = new Uri(options.Endpoint);
-	});
-
-builder.Services.AddHttpClient(
-	"OllamaAgent",
-	(serviceProvider, httpClient) =>
-	{
-		var options = serviceProvider
-			.GetRequiredService<IOptions<OllamaOptions>>()
-			.Value;
-
-		httpClient.BaseAddress = new Uri(options.Endpoint);
-	});
-
-builder.Services.AddTransient<IAiProviderFactory, AiProviderFactory>();
 builder.Services.AddTransient<MessageHandler>();
 builder.Services.AddSingleton<IConversationRepository, InMemoryConversationRepository>();
 builder.Services.AddSingleton<PropertyMcpClient>();
@@ -95,11 +66,17 @@ builder.Services.AddSingleton<IEmbeddingGenerator<string, Embedding<float>>>(
 	{
 		var httpClient = serviceProvider
 			.GetRequiredService<IHttpClientFactory>()
-			.CreateClient("OllamaEmbeddings");
+			.CreateClient();
+
+		var ollamaOptions = serviceProvider
+			.GetRequiredService<IOptions<OllamaOptions>>()
+			.Value;
 
 		var ragOptions = serviceProvider
 			.GetRequiredService<IOptions<RagOptions>>()
 			.Value;
+
+		httpClient.BaseAddress = new Uri(ollamaOptions.Endpoint);
 
 		IEmbeddingGenerator<string, Embedding<float>> generator =
 			new OllamaApiClient(httpClient);
@@ -108,8 +85,7 @@ builder.Services.AddSingleton<IEmbeddingGenerator<string, Embedding<float>>>(
 			.AsBuilder()
 			.ConfigureOptions(options =>
 			{
-				options.ModelId =
-					ragOptions.EmbeddingModel;
+				options.ModelId = ragOptions.EmbeddingModel;
 			})
 			.Build();
 	});
@@ -117,27 +93,23 @@ builder.Services.AddSingleton<IEmbeddingGenerator<string, Embedding<float>>>(
 builder.Services.AddSingleton<VectorStore>(
 	serviceProvider =>
 	{
-		var embeddingGenerator =
-			serviceProvider.GetRequiredService<
-				IEmbeddingGenerator<
-					string,
-					Embedding<float>>>();
+		var embeddingGenerator = serviceProvider.GetRequiredService<
+			IEmbeddingGenerator<string, Embedding<float>>>();
 
 		return new InMemoryVectorStore(
 			new InMemoryVectorStoreOptions
 			{
-				EmbeddingGenerator =
-					embeddingGenerator
+				EmbeddingGenerator = embeddingGenerator
 			});
 	});
 
 builder.Services.AddSingleton<KnowledgeRetriever>();
+builder.Services.AddSingleton<KnowledgeTools>();
 
 builder.Services.AddSingleton<IPendingPropertyReviewRepository, InMemoryPendingPropertyReviewRepository>();
 builder.Services.AddSingleton<IPropertyReviewRepository, InMemoryPropertyReviewRepository>();
 builder.Services.AddSingleton<PropertyReviewService>();
 builder.Services.AddSingleton<PropertyReviewTools>();
-builder.Services.AddSingleton<KnowledgeTools>();
 builder.Services.AddSingleton<PropertyReviewAgent>();
 
 builder.Services.AddProblemDetails();

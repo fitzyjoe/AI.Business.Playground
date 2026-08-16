@@ -1,8 +1,10 @@
+using Microsoft.Extensions.AI;
+
 namespace Lesson09.Agents.Infrastructure.Ai;
 
 public interface IAiProvider
 {
-	Task<AiChatResponse> SendAsync(
-		AiChatRequest request,
-		CancellationToken cancellationToken = default);
+	string Name { get; }
+	string DefaultModel { get; }
+	IChatClient ChatClient { get; }
 }

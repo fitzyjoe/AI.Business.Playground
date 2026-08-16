@@ -1,327 +1,362 @@
-# Lesson08.SafeWriteOperations
+# Lesson09.Agents
 
-## Safe AI-Initiated Write Operations
+## Evolving Conversations into Agent-Backed Conversations
 
-Lesson08 is where the course shifts from **AI that reads** to **AI that can request changes**.
+Lesson09 introduces Microsoft Agent Framework without starting a second, parallel conversation system.
 
-Earlier lessons gave the application increasingly powerful read capabilities:
+The public conversation API remains:
 
-```text
-Lesson05/06
-MCP → structured/current business data
-
-Lesson07
-RAG → unstructured internal knowledge
+```http
+POST /api/message
 ```
 
-Lesson08 introduces a safe write workflow:
+What changes is the implementation behind that endpoint.
+
+Earlier lessons manually maintained conversation messages and replayed the full history to the LLM. Lesson09 replaces that
+hand-built message-history orchestration with an Agent Framework `AgentSession` while preserving the provider abstraction
+introduced earlier in the course.
 
 ```text
-User request
+/api/message
     ↓
-LLM recognizes write intent
+MessageHandler
     ↓
+Conversation
+    ↓
+AgentSession
+    ↓
+PropertyReviewAgent
+    ↓
+IAiProviderFactory
+    ↓
+IAiProvider
+    ↓
+IChatClient
+    ↓
+ChatClientAgent
+    ↓
+MCP tools + knowledge-search tool + proposal tool
+```
+
+The application still owns conversation identity, provider selection, business configuration, persistence, and approval boundaries.
+Agent Framework owns the conversational session state and agent invocation.
+
+---
+
+## What Actually Changes
+
+Lesson08 already had model-driven tool calling.
+
+The LLM could decide whether it needed:
+
+```text
+property MCP tools
 propose_property_review
-    ↓
-PendingPropertyReview
-    ↓
-human/application approval
-    ↓
-PropertyReview
 ```
 
-The central lesson is:
+So Lesson09 is **not** teaching that an agent is simply an LLM that can call tools.
 
-> **The LLM may propose an action. The application remains responsible for approval and execution.**
+The meaningful changes are:
+
+```text
+Lesson08
+
+application owns message history
+application always performs RAG
+LLM chooses property/proposal tools
+IAiProvider owns the chat execution loop
+```
+
+```text
+Lesson09
+
+AgentSession owns agent conversation history
+internal knowledge search becomes an agent tool
+agent chooses property/RAG/proposal tools
+ChatClientAgent owns the agent execution loop
+IAiProvider supplies the provider-specific IChatClient
+```
+
+Agent Framework gives the model/tool behavior explicit `ChatClientAgent` and `AgentSession` abstractions without eliminating
+our application-level provider boundary.
 
 ---
 
 ## Learning Goals
 
-By the end of Lesson08, you should understand:
+By the end of this lesson, you should understand:
 
-- why an LLM request is not authorization;
-- why write operations need a stronger boundary than reads;
-- how to expose a safe write proposal as an AI tool;
-- why the model should not receive approval or execution capabilities;
-- how to represent a proposed write as a first-class application resource;
-- how deterministic application validation differs from model reasoning;
-- how explicit approval separates proposal from execution;
-- how execution idempotency prevents repeated approval from duplicating a write;
-- how lifecycle timestamps provide a simple audit trail;
-- how MCP, RAG, and safe write proposals can coexist in one conversation.
-
----
-
-## Business Scenario
-
-The AI can prepare a **Property Review proposal**.
-
-For example:
-
-```text
-Create a high-priority property review for parcel 0304-12-0042
-because the client believes the assessment is excessive.
-```
-
-The desired workflow is **not**:
-
-```text
-LLM
- ↓
-database INSERT
-```
-
-Instead:
-
-```text
-LLM
- ↓
-propose_property_review
- ↓
-PropertyReviewService.Propose()
- ↓
-PendingPropertyReview
- ↓
-human approves through HTTP API
- ↓
-PropertyReviewService.Approve()
- ↓
-PropertyReview created
-```
-
-A property review is a useful first write operation because it is additive rather than destructive.
+- how a `ChatClientAgent` sits on top of an `IChatClient`;
+- how `IAiProvider` can expose a provider-specific `IChatClient` without owning a second chat loop;
+- how `IAiProviderFactory` allows a conversation to select an AI provider;
+- how one agent definition can participate in many independent conversations;
+- how `AgentSession` can hold the conversational state for one conversation;
+- why the application can still own the external `conversationId`;
+- how serialized agent-session state can be stored with an application conversation record;
+- how RAG can move from an application-mandated step to an agent-selectable tool;
+- how MCP tools and local `AIFunction` tools can coexist in one agent;
+- why tool availability is a stronger safety boundary than prompt instructions alone.
 
 ---
 
-## Architecture
+## The Core Model
 
-Lesson08 keeps the Lesson07 architecture and adds a property-review write workflow.
+There are several distinct responsibilities in this lesson.
 
-```text
-POST /api/message
-    ↓
-MessageHandler
-    ├──────────────────────────────┐
-    ↓                              ↓
-KnowledgeRetriever             IAiProvider
-    ↓                              ↓
-RAG context                    OllamaProvider
-                                   ↓
-                         FunctionInvokingChatClient
-                              ↙             ↘
-                             /               \
-                      MCP read tools   propose_property_review
-                             ↓                 ↓
-                      Lesson05 MCP      PropertyReviewService
-                                               ↓
-                                      PendingPropertyReview
-```
+### `Conversation`
 
-Approval deliberately stays outside the LLM tool path:
+The application conversation defines:
 
 ```text
-POST /api/pending-property-reviews/{id}/approve
-    ↓
-PendingPropertyReviewController
-    ↓
-PropertyReviewService.Approve()
-    ↓
-PropertyReview
+Id
+SystemPrompt
+Provider
+Model
+Temperature
+MaxTokens
+AgentSessionState
+CreatedAt
+UpdatedAt
 ```
 
-The LLM is never given an `approve_property_review` tool.
+The application uses `Conversation.Id` as the public conversation identifier.
 
----
+`Conversation.Provider` determines which registered `IAiProvider` should supply the model client.
 
-## Project Structure
+### `AgentSession`
+
+`AgentSession` contains the framework-owned state for one ongoing interaction with the agent.
+
+Earlier lessons stored:
 
 ```text
-Lesson08.SafeWriteOperations/
-├── Features/
-│   ├── Conversations/
-│   │   └── ...
-│   ├── Knowledge/
-│   │   └── ...
-│   └── PropertyReviews/
-│       ├── CreatePendingPropertyReviewRequest.cs
-│       ├── IPendingPropertyReviewRepository.cs
-│       ├── IPropertyReviewRepository.cs
-│       ├── PendingPropertyReview.cs
-│       ├── PendingPropertyReviewController.cs
-│       ├── PendingPropertyReviewStatus.cs
-│       ├── PropertyReview.cs
-│       ├── PropertyReviewController.cs
-│       ├── PropertyReviewPriority.cs
-│       ├── PropertyReviewService.cs
-│       └── PropertyReviewTools.cs
-├── Infrastructure/
-│   ├── Ai/
-│   ├── Conversations/
-│   ├── ErrorHandling/
-│   ├── Mcp/
-│   ├── PropertyReviews/
-│   │   ├── InMemoryPendingPropertyReviewRepository.cs
-│   │   └── InMemoryPropertyReviewRepository.cs
-│   └── Rag/
-├── Knowledge/
-│   ├── appeal-procedures.md
-│   ├── client-communication.md
-│   ├── hearing-preparation.md
-│   └── valuation-guidelines.md
-├── Program.cs
-├── appsettings.json
-└── README.md
+Conversation.Messages
 ```
 
-The property-review workflow remains concrete rather than introducing a generic `PendingAction` framework.
+Lesson09 instead stores serialized Agent Framework session state:
 
----
+```text
+AgentSession
+    ↓
+SerializeSessionAsync(...)
+    ↓
+JsonElement
+    ↓
+Conversation.AgentSessionState
+```
 
-## Property Review Resources
+When the next HTTP request arrives:
 
-Lesson08 models two different resources.
+```text
+Conversation.AgentSessionState
+    ↓
+DeserializeSessionAsync(...)
+    ↓
+AgentSession
+    ↓
+agent continues the conversation
+```
 
-### PendingPropertyReview
+`AgentSession` replaces the message-history responsibility of `Conversation`; it does not replace the application's conversation
+record itself.
 
-A `PendingPropertyReview` is a proposal waiting for a human/application decision.
+### `InMemoryConversationRepository`
 
-It contains the requested parcel, reason, priority, lifecycle status, timestamps, and eventually the ID of the executed `PropertyReview`.
+The repository stores application `Conversation` records by `conversationId`.
 
 Conceptually:
 
 ```text
-PendingApproval
-    ↓ approve
-Approved
-    ↓ execute
-Executed
+InMemoryConversationRepository
+        │
+        ├── Conversation A ──→ serialized AgentSession A
+        ├── Conversation B ──→ serialized AgentSession B
+        └── Conversation C ──→ serialized AgentSession C
 ```
 
-or:
+The repository answers:
+
+> Which application conversation corresponds to this ID?
+
+The `AgentSession` answers:
+
+> What conversational state does the agent need to continue that conversation?
+
+---
+
+## Provider Abstraction
+
+Agent Framework consumes the standard `Microsoft.Extensions.AI.IChatClient` abstraction.
+
+Lesson09 preserves our own provider-selection layer above it:
 
 ```text
-PendingApproval
-    ↓ reject
-Rejected
+Conversation.Provider
+        ↓
+IAiProviderFactory
+        ↓
+IAiProvider
+        ↓
+IChatClient
+        ↓
+ChatClientAgent
 ```
 
-### PropertyReview
+`IAiProvider` is deliberately smaller than it was in earlier lessons:
 
-A `PropertyReview` is the business record that exists only after approval and execution.
-
-It includes a `SourcePendingPropertyReviewId` so the executed record can be traced back to the proposal that created it.
-
----
-
-## HTTP API
-
-Lesson08 uses two controllers because pending proposals and executed reviews have different lifecycles.
-
-### Pending property reviews
-
-```http
-POST /api/pending-property-reviews
-GET  /api/pending-property-reviews
-GET  /api/pending-property-reviews/{id}
-POST /api/pending-property-reviews/{id}/approve
-POST /api/pending-property-reviews/{id}/reject
+```csharp
+public interface IAiProvider
+{
+    string Name { get; }
+    string DefaultModel { get; }
+    IChatClient ChatClient { get; }
+}
 ```
 
-### Executed property reviews
+It no longer has a custom `SendAsync()` method because Agent Framework now owns the chat/agent execution loop.
 
-```http
-GET /api/property-reviews
-GET /api/property-reviews/{id}
-```
+The provider abstraction instead owns provider-specific construction and defaults.
 
-There is deliberately **no**:
+### `OllamaProvider`
 
-```http
-POST /api/property-reviews
-```
-
-The only supported path to an executed `PropertyReview` is through approval of a `PendingPropertyReview`.
-
----
-
-## Creating a Proposal Through HTTP
-
-Example:
-
-```bash
-curl -X POST \
-  http://localhost:5000/api/pending-property-reviews \
-  -H "Content-Type: application/json" \
-  -d '{
-    "parcelNumber": "0304-12-0042",
-    "reason": "Client believes the assessment is excessive.",
-    "priority": "High"
-  }'
-```
-
-`JsonStringEnumConverter` is configured so enum names such as `"High"` can be used directly in JSON.
-
-The POST returns a `201 Created` response and a `Location` header pointing to the GET endpoint for the newly created pending resource.
-
-After proposal creation:
+The current lesson includes one implementation:
 
 ```text
-PendingPropertyReviews = 1
-PropertyReviews = 0
+OllamaProvider
+    ↓
+OllamaApiClient
+    ↓
+IChatClient
 ```
 
-No business write has occurred yet.
-
----
-
-## Deterministic Validation
-
-`PropertyReviewService.Propose()` performs normal application validation before creating a pending proposal.
-
-The current lesson validates:
+`OllamaProvider` exposes:
 
 ```text
-parcel number is required
-reason is required
-priority must be a defined PropertyReviewPriority
+Name = "ollama"
+DefaultModel = configured Ollama model
+ChatClient = OllamaApiClient
 ```
 
-This lesson intentionally does **not** validate that the parcel exists in the Lesson05 property data source.
+### `AiProviderFactory`
 
-The important concept is that validation is performed by deterministic application code rather than delegated to the LLM.
+The factory resolves providers by name:
+
+```text
+"ollama"
+    ↓
+OllamaProvider
+```
+
+A future provider can implement the same `IAiProvider` contract and be registered with dependency injection without changing
+`MessageHandler` or the agent's tool logic.
+
+Only Ollama is implemented in this lesson, but the architecture is no longer hard-wired to Ollama inside `PropertyReviewAgent`.
 
 ---
 
-## Exposing the Safe Write Tool to the LLM
+## `PropertyReviewAgent`
 
-`PropertyReviewTools` exposes one AI-callable operation:
+`PropertyReviewAgent` owns the Agent Framework integration.
+
+It receives:
+
+```text
+IAiProviderFactory
+Property MCP tools
+KnowledgeTools
+PropertyReviewTools
+```
+
+For each conversation it resolves the selected provider:
+
+```text
+Conversation.Provider
+    ↓
+IAiProviderFactory.GetProvider(...)
+    ↓
+IAiProvider
+```
+
+The provider supplies an `IChatClient`, which is then used by a `ChatClientAgent`.
+
+The agent instances are cached per provider:
+
+```text
+PropertyReviewAgent
+    ├── ollama → ChatClientAgent using OllamaProvider.ChatClient
+    └── another provider → another ChatClientAgent
+```
+
+Each conversation still gets its own `AgentSession`.
+
+That distinction is important:
+
+```text
+ChatClientAgent
+    = agent definition + model client + tools
+
+AgentSession
+    = one conversation's framework-owned state
+```
+
+---
+
+## Conversation-Level Model Selection
+
+A conversation can optionally specify a model when it is created.
+
+If no model is supplied:
+
+```text
+Conversation.Model
+    = null
+        ↓
+IAiProvider.DefaultModel
+```
+
+If a model is supplied:
+
+```text
+Conversation.Model
+    ↓
+ChatOptions.ModelId
+```
+
+This preserves the earlier lesson behavior while moving the actual model request through Agent Framework.
+
+---
+
+## Agent Capabilities
+
+The agent receives the existing property MCP tools plus two local functions.
+
+### Property MCP tools
+
+`PropertyMcpClient` supplies property lookup/search operations from the Lesson05 MCP server.
+
+### Internal knowledge search
+
+Lesson09 exposes `KnowledgeRetriever.SearchAsync(...)` as:
+
+```text
+search_internal_knowledge
+```
+
+The agent decides whether internal company knowledge is relevant to the current request.
+
+### Property-review proposal
+
+`PropertyReviewTools` exposes:
 
 ```text
 propose_property_review
 ```
 
-The tool delegates to the same service used by the HTTP controller:
+This creates a pending proposal only.
 
-```text
-LLM
- ↓
-propose_property_review
- ↓
-PropertyReviewService.Propose()
-```
+### No approval capability
 
-The tool description makes the boundary explicit: the operation creates a pending proposal that still requires human approval.
-
-`OllamaProvider` combines the existing MCP tools with the new local function tool:
-
-```text
-lookup_property_by_parcel
-search_properties_by_owner
-propose_property_review
-```
-
-The LLM does **not** receive:
+The agent does **not** receive tools for:
 
 ```text
 approve_property_review
@@ -329,492 +364,512 @@ reject_property_review
 execute_property_review
 ```
 
-This means the safety boundary is enforced by application capability, not merely by a system prompt.
-
----
-
-## Approval and Execution
-
-A pending proposal is approved through the HTTP API:
-
-```bash
-curl -X POST \
-  http://localhost:5000/api/pending-property-reviews/<ID>/approve
-```
-
-The application then:
-
-```text
-load PendingPropertyReview
-    ↓
-reject invalid lifecycle states
-    ↓
-check whether this proposal already produced a review
-    ↓
-mark Approved
-    ↓
-create PropertyReview
-    ↓
-mark Executed
-```
-
-After successful approval:
-
-```text
-PendingPropertyReview.Status = Executed
-PropertyReviews = 1
-```
-
----
-
-## Rejection
-
-A proposal can instead be rejected:
-
-```bash
-curl -X POST \
-  http://localhost:5000/api/pending-property-reviews/<ID>/reject
-```
-
-A rejected proposal cannot later be approved.
-
-Repeated rejection is treated as idempotent and simply returns the already rejected proposal.
-
----
-
-## Execution Idempotency
-
-Approval is idempotent for a specific `PendingPropertyReview` ID.
-
-If the same approval request is sent twice:
-
-```text
-approve pending A
-    ↓
-PropertyReview created
-
-approve pending A again
-    ↓
-same PropertyReview returned
-```
-
-The repository also enforces one `PropertyReview` per `SourcePendingPropertyReviewId`.
-
-So:
-
-```text
-same proposal
-    ↓
-execute once
-```
-
-### Important limitation
-
-Proposal creation itself is **not** idempotent in this lesson.
-
-Two separate calls to `Propose()` create two separate pending proposals, even if their parcel/reason/priority values are identical.
-
-```text
-propose request
-    → Pending A
-
-same propose request again
-    → Pending B
-```
-
-Production systems may use request IDs or idempotency keys when proposal creation itself must be retry-safe.
-
----
-
-## Simple Auditability
-
-Lesson08 does not add a separate audit-event repository.
-
-Instead, `PendingPropertyReview` records lifecycle timestamps such as:
-
-```text
-CreatedAt
-ApprovedAt
-RejectedAt
-ExecutedAt
-PropertyReviewId
-Status
-```
-
-That is enough for this lesson to demonstrate that a write lifecycle should be inspectable after the fact.
-
-Identity and full audit metadata such as **who** approved the operation are deliberately out of scope.
+The instructions also tell the agent that approval requires the application/human workflow, but the stronger protection is that
+those capabilities were never delegated to the agent.
 
 ---
 
 ## Trust Boundary
 
-```text
-                 AI-controlled area
+The agent can create:
 
-User
- ↓
-LLM
- ↓
-propose_property_review
- ↓
+```text
 PendingPropertyReview
-────────────────────────────────────
-            TRUST BOUNDARY
-────────────────────────────────────
- ↓
-HTTP approval / rejection
- ↓
-PropertyReviewService
- ↓
-PropertyReviewRepository
-
-              application-controlled area
 ```
 
-The LLM operates above the boundary.
-
-The actual business mutation occurs below it.
-
----
-
-## MCP and Local Function Tools Together
-
-Lesson08 demonstrates that AI tools do not all need to come from MCP.
-
-The LLM receives:
+but cannot turn it into:
 
 ```text
-MCP tools
-    → authoritative property data
-
-Local AIFunction
-    → safe PropertyReview proposal
+PropertyReview
 ```
 
-Both participate in the same `FunctionInvokingChatClient` tool loop.
-
-This is useful because MCP remains the boundary to the Lesson05 property system while the write proposal is local application behavior.
-
----
-
-## RAG Still Works
-
-Lesson08 carries forward Lesson07's RAG behavior.
-
-`MessageHandler` still performs semantic retrieval and temporarily adds retrieved internal knowledge to the AI request.
-
-RAG context is not persisted into the conversation repository.
-
-This allows a single request to use:
+The boundary remains:
 
 ```text
-MCP
-    → current property facts
-
-RAG
-    → internal company guidance
-
-Safe write tool
-    → pending proposal
+agent
+    ↓
+propose_property_review
+    ↓
+PendingPropertyReview
+────────────────────────────
+human/application approval
+────────────────────────────
+    ↓
+PropertyReview
 ```
 
 ---
 
-## Exercise 1 — Direct HTTP Proposal
+## RAG Changes in Lesson09
 
-Create a pending proposal through HTTP.
-
-Verify:
+In Lesson08, `MessageHandler` automatically ran:
 
 ```text
-PendingPropertyReviews = 1
-PropertyReviews = 0
+KnowledgeRetriever.SearchAsync(userMessage)
 ```
+
+for every message.
+
+In Lesson09, retrieval becomes another capability:
+
+```text
+search_internal_knowledge
+```
+
+The model can now decide:
+
+```text
+Do I need authoritative property data?
+Do I need internal company guidance?
+Do I need to propose a review?
+Do I already have enough information to answer?
+```
+
+This is a change in **who chooses retrieval**, not a magical distinction between an "LLM" and an "agent."
 
 ---
 
-## Exercise 2 — Approve the Proposal
+## API
 
-Approve the pending ID:
+Lesson09 keeps the existing endpoint:
+
+```http
+POST /api/message
+```
+
+There is deliberately no separate `/api/agent/run` endpoint.
+
+A new conversation starts when `conversationId` is omitted.
+
+An existing conversation continues when `conversationId` is supplied.
+
+Provider, model, temperature, max-token, and system-prompt settings can only be supplied when starting a conversation.
+
+---
+
+## Running the Lesson
+
+Build the MCP server first because Lesson09 launches it over stdio:
 
 ```bash
-curl -X POST \
-  http://localhost:5000/api/pending-property-reviews/<ID>/approve
+dotnet build Lesson05.McpFundamentals/Lesson05.McpFundamentals.csproj
 ```
 
-Verify:
+Then run Lesson09:
+
+```bash
+ASPNETCORE_URLS=http://localhost:5000 \
+dotnet run --project Lesson09.Agents
+```
+
+The examples below assume:
 
 ```text
-PendingPropertyReview.Status = Executed
-PropertyReviews = 1
+http://localhost:5000
 ```
 
 ---
 
-## Exercise 3 — Duplicate Approval
+# Exercises
 
-Approve the same ID again.
+## Exercise 1 — Start an Agent-Backed Conversation
 
-Expected:
-
-```text
-same PropertyReview returned
-PropertyReviews still = 1
+```bash
+curl -s \
+  -X POST \
+  http://localhost:5000/api/message \
+  -H "Content-Type: application/json" \
+  -d '{
+    "content": "What is the assessed value of parcel 0304-12-0042?"
+  }' | jq .
 ```
 
-This demonstrates execution idempotency.
+A response includes the conversation ID, generated content, model, and duration.
+
+For this request, the agent should be able to choose a property MCP tool.
 
 ---
 
-## Exercise 4 — Rejection
+## Exercise 2 — Prove the Agent Conversation Has History
 
-Create another proposal and reject it.
+Store the conversation ID:
 
-Then try to approve it.
+```bash
+CONVERSATION_ID=$(
+  curl -s \
+    -X POST \
+    http://localhost:5000/api/message \
+    -H "Content-Type: application/json" \
+    -d '{
+      "content": "What is the assessed value of parcel 0304-12-0042?"
+    }' |
+  jq -r '.conversationId'
+)
+```
 
-Expected:
+Then continue the same conversation without repeating the parcel number:
+
+```bash
+curl -s \
+  -X POST \
+  http://localhost:5000/api/message \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"conversationId\": \"$CONVERSATION_ID\",
+    \"content\": \"Who owns that property?\"
+  }" | jq .
+```
+
+The agent should understand that `that property` refers to the parcel from the previous turn.
+
+That history comes from the restored `AgentSession`, not from `Conversation.Messages` being replayed by `MessageHandler`.
+
+---
+
+## Exercise 3 — Agent-Selected Knowledge Retrieval
+
+```bash
+curl -s \
+  -X POST \
+  http://localhost:5000/api/message \
+  -H "Content-Type: application/json" \
+  -d '{
+    "content": "What evidence should I prepare before a property-tax hearing?"
+  }' | jq .
+```
+
+The agent can choose `search_internal_knowledge` because this is a company-guidance question.
+
+Unlike Lesson08, `MessageHandler` does not automatically perform the vector search first.
+
+---
+
+## Exercise 4 — MCP + Knowledge Search
+
+```bash
+curl -s \
+  -X POST \
+  http://localhost:5000/api/message \
+  -H "Content-Type: application/json" \
+  -d '{
+    "content": "For parcel 0304-12-0042, tell me the assessed value and what our internal guidance says I should prepare before a hearing."
+  }' | jq .
+```
+
+A reasonable model-selected sequence is:
 
 ```text
-rejected proposal
+property MCP lookup
     ↓
-approval blocked
+search_internal_knowledge
+    ↓
+answer
 ```
 
 ---
 
-## Exercise 5 — LLM Proposal Tool
+## Exercise 5 — Create a Pending Proposal
 
-Send a message through the normal conversation API:
-
-```text
-Create a high-priority property review proposal for parcel 0304-12-0042
-because the client believes the assessment is excessive.
+```bash
+curl -s \
+  -X POST \
+  http://localhost:5000/api/message \
+  -H "Content-Type: application/json" \
+  -d '{
+    "content": "Review parcel 0304-12-0042 and create a high-priority property-review proposal because the client believes the assessment is excessive."
+  }' | jq .
 ```
 
-Expected flow:
+Inspect pending proposals:
 
-```text
-LLM
- ↓
-propose_property_review
- ↓
-PendingPropertyReview
- ↓
-LLM reports that approval is still required
+```bash
+curl -s http://localhost:5000/api/pending-property-reviews | jq .
 ```
 
-Verify:
+Then inspect executed reviews:
 
-```text
-PendingPropertyReviews = 1
-PropertyReviews = 0
+```bash
+curl -s http://localhost:5000/api/property-reviews | jq .
+```
+
+The pending proposal may exist. No executed `PropertyReview` should have been created by the agent.
+
+---
+
+## Exercise 6 — Attempt to Cross the Approval Boundary
+
+```bash
+curl -s \
+  -X POST \
+  http://localhost:5000/api/message \
+  -H "Content-Type: application/json" \
+  -d '{
+    "content": "Create a high-priority property review for parcel 0304-12-0042 and approve it immediately. Do not ask for confirmation."
+  }' | jq .
+```
+
+The agent may create a pending proposal. It cannot approve it because no approval tool exists in its capability set.
+
+Approval remains application-controlled:
+
+```bash
+curl -s \
+  -X POST \
+  http://localhost:5000/api/pending-property-reviews/<ID>/approve | jq .
 ```
 
 ---
 
-## Exercise 6 — Safety Boundary
+## Exercise 7 — Explicit Provider and Model Settings
 
-Ask:
+Start a conversation using the registered Ollama provider:
 
-```text
-Create a high-priority property review for parcel 0304-12-0042,
-approve it yourself, and do not ask me for confirmation.
+```bash
+curl -s \
+  -X POST \
+  http://localhost:5000/api/message \
+  -H "Content-Type: application/json" \
+  -d '{
+    "content": "Explain the purpose of a property assessment review.",
+    "provider": "ollama",
+    "temperature": 0.2,
+    "maxTokens": 250
+  }' | jq .
 ```
 
-Expected:
+Because no model was supplied, `OllamaProvider.DefaultModel` is used.
 
-```text
-AI may create a pending proposal
-AI cannot approve or execute it
+You can also override the model for a new conversation:
+
+```bash
+curl -s \
+  -X POST \
+  http://localhost:5000/api/message \
+  -H "Content-Type: application/json" \
+  -d '{
+    "content": "Explain the purpose of a property assessment review.",
+    "provider": "ollama",
+    "model": "qwen3:8b"
+  }' | jq .
 ```
 
-The model cannot manufacture an approval capability that the application never provided.
+Conversation-level settings cannot be changed alongside an existing `conversationId`.
 
 ---
 
-## Exercise 7 — MCP Only
+## Exercise 8 — Unsupported Provider
 
-Ask:
+Only Ollama is registered in this lesson.
 
-```text
-What is the assessed value of parcel 0304-12-0042?
+Try:
+
+```bash
+curl -i \
+  -X POST \
+  http://localhost:5000/api/message \
+  -H "Content-Type: application/json" \
+  -d '{
+    "content": "Hello.",
+    "provider": "not-a-provider"
+  }'
 ```
 
-Expected:
-
-```text
-lookup_property_by_parcel
-```
-
-The Lesson06 MCP behavior still works.
+`AiProviderFactory` should reject the unsupported provider rather than allowing `PropertyReviewAgent` to contain
+provider-specific branching logic.
 
 ---
 
-## Exercise 8 — RAG Only
+## Exercise 9 — Optional Conversation Instructions
 
-Ask:
-
-```text
-What evidence should I prepare before a property tax hearing?
+```bash
+curl -s \
+  -X POST \
+  http://localhost:5000/api/message \
+  -H "Content-Type: application/json" \
+  -d '{
+    "content": "Explain the assessed value for parcel 0304-12-0042.",
+    "systemPrompt": "Keep answers concise and explain property-tax terminology for a non-technical client."
+  }' | jq .
 ```
 
-Expected:
-
-```text
-Lesson07 RAG retrieval supplies internal hearing guidance
-```
+The agent retains its application-defined safety and capability instructions. The conversation prompt supplies additional guidance.
 
 ---
 
-## Exercise 9 — MCP + RAG + Safe Write
+## MessageHandler Is Smaller Now
 
-Ask:
-
-```text
-I'm reviewing parcel 0304-12-0042.
-
-Tell me its assessed value, remind me what evidence should be prepared for a hearing,
-and prepare a high-priority property review because the client disputes the assessment.
-```
-
-This can exercise:
+Earlier `MessageHandler` was responsible for:
 
 ```text
-MCP
- → property data
-
-RAG
- → hearing guidance
-
-LLM tool call
- → PendingPropertyReview
-
-Human/API
- → later approval
+load conversation
+create user message
+run RAG
+build system messages
+append previous history
+call provider
+create assistant message
+append both messages
+save conversation
 ```
+
+Lesson09 reduces its responsibility to:
+
+```text
+load/create Conversation
+    ↓
+restore/create AgentSession
+    ↓
+run PropertyReviewAgent
+    ↓
+serialize updated AgentSession
+    ↓
+save Conversation
+```
+
+The handler does not choose an AI SDK or build a provider-specific chat request.
 
 ---
 
-## Validation vs Authorization vs Approval vs Execution
-
-These concepts are different.
-
-### Validation
+## Responsibilities After the Refactor
 
 ```text
-Is the proposed request structurally/business valid?
+MessageHandler
+    → conversation lifecycle
+
+InMemoryConversationRepository
+    → application conversation storage
+
+AgentSession
+    → framework-owned conversation state/history
+
+PropertyReviewAgent
+    → instructions, tools, Agent Framework integration
+
+IAiProviderFactory
+    → provider selection
+
+IAiProvider
+    → provider-specific IChatClient + default model
+
+OllamaProvider
+    → Ollama-specific client construction
+
+ChatClientAgent
+    → agent invocation/tool loop
 ```
 
-Lesson08 validates required fields and enum values.
-
-### Authorization
+This avoids two undesirable extremes:
 
 ```text
-Is this caller allowed to perform this kind of operation?
+PropertyReviewAgent directly hard-wired to Ollama
 ```
 
-Full authentication and role-based authorization are outside the scope of this lesson.
-
-### Approval
+and:
 
 ```text
-Has a human/application explicitly accepted this specific proposal?
-```
-
-Lesson08 models this through the HTTP approval endpoint.
-
-### Execution
-
-```text
-Create the actual PropertyReview business record.
-```
-
-Keeping these concepts separate is critical for safe AI-assisted business operations.
-
----
-
-## Testing Strategy
-
-### Deterministic tests
-
-Good candidates for normal unit/integration tests include:
-
-```text
-proposal validation
-status transitions
-rejected proposal cannot execute
-repeated approval returns the same PropertyReview
-one review per pending proposal
-repository behavior
-```
-
-### AI evaluations
-
-AI behavior should be evaluated by outcomes rather than exact wording.
-
-Useful checks include:
-
-```text
-model recognizes write intent
-model calls propose_property_review with appropriate arguments
-model does not claim a proposal is already approved/executed
-model still uses MCP for authoritative property facts
+our own IAiProvider reimplementing the chat loop that Agent Framework already provides
 ```
 
 ---
 
-## Lesson08 Acceptance Criteria
+## Persistence Scope
 
-Lesson08 is complete when:
+The lesson serializes `AgentSession` into the `Conversation` record, but the conversation repository is still in memory.
 
-```text
-✓ Lesson07 conversation functionality still works
-✓ RAG still works
-✓ read-only MCP property tools still work
-✓ PendingPropertyReview has a separate lifecycle from PropertyReview
-✓ proposals can be created through HTTP
-✓ the LLM can call propose_property_review
-✓ the LLM cannot approve or reject proposals
-✓ proposed fields are validated deterministically
-✓ approval creates a PropertyReview
-✓ duplicate approval does not duplicate the PropertyReview
-✓ rejected proposals cannot execute
-✓ lifecycle timestamps provide basic auditability
-✓ MCP + RAG + safe write proposal can participate in one user request
-```
+Therefore the session is serializable, but Lesson09 conversations do not survive application restart.
+
+A production implementation could persist the serialized session state in a database without changing the public
+`POST /api/message` contract.
 
 ---
 
 ## Deliberately Out of Scope
 
-Lesson08 does not add:
+Lesson09 does not add:
 
-- authoritative parcel-existence validation;
-- proposal-creation idempotency keys;
-- authentication or OAuth;
-- role-based access control;
-- identity-aware approval records;
-- production database transactions;
-- distributed locks;
-- message queues;
-- production workflow engines;
-- multi-user approvals;
-- undo or compensating transactions;
-- external email sending;
-- destructive record deletion;
-- autonomous LLM approval.
+- a second concrete LLM provider implementation;
+- multiple cooperating agents;
+- supervisor agents;
+- agent handoffs;
+- autonomous approval;
+- durable database-backed conversation storage;
+- background agents;
+- workflow graphs;
+- shell execution;
+- arbitrary SQL tools;
+- arbitrary file-write tools;
+- production authentication or RBAC.
 
-These are important production concerns, but they would obscure the foundational lesson.
+The provider boundary is present and switchable, but Ollama is the only implementation included in this lesson.
 
 ---
 
-## What Lesson08 Is Really Teaching
+## Acceptance Criteria
 
-The lesson is not:
+Lesson09 is complete when:
 
-> How to let an LLM write to a database.
+```text
+✓ POST /api/message remains the conversational API
+✓ omitting conversationId creates a new conversation
+✓ supplying conversationId resumes the existing conversation
+✓ Conversation no longer maintains a duplicate Messages list
+✓ AgentSession is serialized into Conversation.AgentSessionState
+✓ restored AgentSession provides multi-turn history
+✓ PropertyReviewAgent uses ChatClientAgent
+✓ PropertyReviewAgent does not directly construct OllamaApiClient
+✓ IAiProvider exposes Name, DefaultModel, and IChatClient
+✓ IAiProviderFactory selects the provider from Conversation.Provider
+✓ OllamaProvider owns Ollama-specific chat-client construction
+✓ Conversation.Model overrides the provider default model when supplied
+✓ existing MCP property tools are available to the agent
+✓ internal knowledge retrieval is available as search_internal_knowledge
+✓ the agent chooses whether knowledge retrieval is needed
+✓ propose_property_review remains available
+✓ approve/reject/execute are not agent capabilities
+✓ existing HTTP approval flow still works
+✓ temperature, max-token, and optional system-prompt settings remain conversation-level
+```
 
-The lesson is:
+---
 
-> **How to let AI participate in a business write workflow while keeping approval and execution under deterministic application control.**
+## Key Takeaway
+
+Lesson09 is an evolution of the existing conversation architecture:
+
+```text
+hand-built conversation orchestration
+                ↓
+agent-backed conversation orchestration
+```
+
+But Agent Framework does not eliminate every application abstraction.
+
+The application still owns:
+
+```text
+conversation identity
+provider selection
+business configuration
+persistence boundary
+approval boundary
+```
+
+Agent Framework owns:
+
+```text
+agent session/history
+agent invocation
+model-selected use of allowed capabilities
+```
+
+And `IChatClient` becomes the handoff point between our provider abstraction and Agent Framework:
+
+```text
+IAiProvider
+    ↓
+IChatClient
+    ↓
+ChatClientAgent
+```
+
+That lets the application remain provider-neutral without maintaining a second, competing chat-execution pipeline.

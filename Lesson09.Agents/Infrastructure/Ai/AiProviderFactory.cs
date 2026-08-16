@@ -1,15 +1,23 @@
-using Lesson09.Agents.Infrastructure.Ai.Providers;
-
 namespace Lesson09.Agents.Infrastructure.Ai;
 
-public sealed class AiProviderFactory(OllamaProvider ollamaProvider) : IAiProviderFactory
+public sealed class AiProviderFactory : IAiProviderFactory
 {
-    public IAiProvider GetProvider(string providerName)
-    {
-        return providerName.ToLowerInvariant() switch
-        {
-            "ollama" => ollamaProvider,
-            _ => throw new NotSupportedException($"AI Provider '{providerName}' is not supported.")
-        };
-    }
+	private readonly IReadOnlyDictionary<string, IAiProvider> _providers;
+
+	public AiProviderFactory(IEnumerable<IAiProvider> providers)
+	{
+		_providers = providers.ToDictionary(
+			provider => provider.Name,
+			StringComparer.OrdinalIgnoreCase);
+	}
+
+	public IAiProvider GetProvider(string provider)
+	{
+		if (_providers.TryGetValue(provider, out var aiProvider))
+		{
+			return aiProvider;
+		}
+
+		throw new NotSupportedException($"AI provider '{provider}' is not supported.");
+	}
 }

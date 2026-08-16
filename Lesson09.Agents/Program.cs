@@ -1,4 +1,4 @@
-﻿using System.Text.Json.Serialization;
+using System.Text.Json.Serialization;
 using CommunityToolkit.VectorData.InMemory;
 using Lesson09.Agents.Features.Agents;
 using Lesson09.Agents.Features.Conversations;
@@ -52,27 +52,7 @@ builder.Services.AddControllers()
 		options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
 	});
 
-builder.Services.AddHttpClient(
-	"OllamaChat",
-	(serviceProvider, httpClient) =>
-	{
-		var options = serviceProvider
-			.GetRequiredService<IOptions<OllamaOptions>>()
-			.Value;
-
-		httpClient.BaseAddress = new Uri(options.Endpoint);
-	});
-
-builder.Services.AddHttpClient(
-	"OllamaEmbeddings",
-	(serviceProvider, httpClient) =>
-	{
-		var options = serviceProvider
-			.GetRequiredService<IOptions<OllamaOptions>>()
-			.Value;
-
-		httpClient.BaseAddress = new Uri(options.Endpoint);
-	});
+builder.Services.AddHttpClient();
 
 builder.Services.AddSingleton<IAiProvider, OllamaProvider>();
 builder.Services.AddSingleton<IAiProviderFactory, AiProviderFactory>();
@@ -86,11 +66,17 @@ builder.Services.AddSingleton<IEmbeddingGenerator<string, Embedding<float>>>(
 	{
 		var httpClient = serviceProvider
 			.GetRequiredService<IHttpClientFactory>()
-			.CreateClient("OllamaEmbeddings");
+			.CreateClient();
+
+		var ollamaOptions = serviceProvider
+			.GetRequiredService<IOptions<OllamaOptions>>()
+			.Value;
 
 		var ragOptions = serviceProvider
 			.GetRequiredService<IOptions<RagOptions>>()
 			.Value;
+
+		httpClient.BaseAddress = new Uri(ollamaOptions.Endpoint);
 
 		IEmbeddingGenerator<string, Embedding<float>> generator =
 			new OllamaApiClient(httpClient);

@@ -15,7 +15,9 @@ public sealed class OllamaProvider : IAiProvider, IDisposable
 	{
 		_options = options.Value;
 
-		var httpClient = httpClientFactory.CreateClient("OllamaChat");
+		var httpClient = httpClientFactory.CreateClient();
+		httpClient.BaseAddress = new Uri(_options.Endpoint);
+
 		ChatClient = new OllamaApiClient(httpClient);
 	}
 

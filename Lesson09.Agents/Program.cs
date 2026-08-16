@@ -18,6 +18,7 @@ using OllamaSharp;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Ollama Options
 builder.Services
 	.AddOptions<OllamaOptions>()
 	.Bind(builder.Configuration.GetSection("Ollama"))
@@ -32,6 +33,7 @@ builder.Services
 		"An Ollama default model is required.")
 	.ValidateOnStart();
 
+// RAG Options
 builder.Services
 	.AddOptions<RagOptions>()
 	.Bind(builder.Configuration.GetSection("Rag"))
@@ -53,15 +55,14 @@ builder.Services.AddControllers()
 	});
 
 builder.Services.AddHttpClient();
-
 builder.Services.AddSingleton<IAiProvider, OllamaProvider>();
 builder.Services.AddSingleton<IAiProviderFactory, AiProviderFactory>();
-
 builder.Services.AddTransient<MessageHandler>();
 builder.Services.AddSingleton<IConversationRepository, InMemoryConversationRepository>();
 builder.Services.AddSingleton<PropertyMcpClient>();
 
-builder.Services.AddSingleton<IEmbeddingGenerator<string, Embedding<float>>>(
+// RAG in Ollama
+builder.Services.AddSingleton<VectorStore>(
 	serviceProvider =>
 	{
 		var httpClient = serviceProvider
@@ -77,24 +78,16 @@ builder.Services.AddSingleton<IEmbeddingGenerator<string, Embedding<float>>>(
 			.Value;
 
 		httpClient.BaseAddress = new Uri(ollamaOptions.Endpoint);
-
-		IEmbeddingGenerator<string, Embedding<float>> generator =
-			new OllamaApiClient(httpClient);
-
-		return generator
+		
+		IEmbeddingGenerator<string, Embedding<float>> generator = new OllamaApiClient(httpClient);
+		
+		var embeddingGenerator = generator
 			.AsBuilder()
 			.ConfigureOptions(options =>
 			{
 				options.ModelId = ragOptions.EmbeddingModel;
 			})
 			.Build();
-	});
-
-builder.Services.AddSingleton<VectorStore>(
-	serviceProvider =>
-	{
-		var embeddingGenerator = serviceProvider.GetRequiredService<
-			IEmbeddingGenerator<string, Embedding<float>>>();
 
 		return new InMemoryVectorStore(
 			new InMemoryVectorStoreOptions
@@ -105,7 +98,6 @@ builder.Services.AddSingleton<VectorStore>(
 
 builder.Services.AddSingleton<KnowledgeRetriever>();
 builder.Services.AddSingleton<KnowledgeTools>();
-
 builder.Services.AddSingleton<IPendingPropertyReviewRepository, InMemoryPendingPropertyReviewRepository>();
 builder.Services.AddSingleton<IPropertyReviewRepository, InMemoryPropertyReviewRepository>();
 builder.Services.AddSingleton<PropertyReviewService>();

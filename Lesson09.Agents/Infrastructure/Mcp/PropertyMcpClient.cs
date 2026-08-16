@@ -8,8 +8,7 @@ public sealed class PropertyMcpClient : IAsyncDisposable
 
 	public IReadOnlyList<McpClientTool> Tools { get; private set; } = [];
 
-	public async Task InitializeAsync(
-		CancellationToken cancellationToken = default)
+	public async Task InitializeAsync(CancellationToken cancellationToken = default)
 	{
 		if (_client is not null)
 		{
@@ -24,17 +23,14 @@ public sealed class PropertyMcpClient : IAsyncDisposable
 				Command = "dotnet",
 				Arguments = ["./bin/Debug/net10.0/Lesson05.McpFundamentals.dll"],
 				WorkingDirectory = lesson05Directory,
-				StandardErrorLines =
-					line => Console.Error.WriteLine(
-						$"[Lesson05] {line}")
+				StandardErrorLines = line => Console.Error.WriteLine($"[Lesson05] {line}")
 			});
 
 		_client = await McpClient.CreateAsync(transport, cancellationToken: cancellationToken);
 
 		Tools =
 		[
-			.. await _client.ListToolsAsync(
-				cancellationToken: cancellationToken)
+			.. await _client.ListToolsAsync(cancellationToken: cancellationToken)
 		];
 	}
 

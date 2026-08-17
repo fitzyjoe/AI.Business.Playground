@@ -30,9 +30,9 @@ PropertyReviewAgent
 IAiProviderFactory
     ↓
 IAiProvider
-    ↓
+    ↓ supplies
 IChatClient
-    ↓
+    ↓ passed into
 ChatClientAgent
     ↓
 MCP tools + knowledge-search tool + proposal tool
@@ -196,9 +196,9 @@ Conversation.Provider
 IAiProviderFactory
         ↓
 IAiProvider
-        ↓
+        ↓ supplies
 IChatClient
-        ↓
+        ↓ passed into
 ChatClientAgent
 ```
 

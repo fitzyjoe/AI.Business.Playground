@@ -18,6 +18,6 @@ public sealed class AiProviderFactory : IAiProviderFactory
 			return aiProvider;
 		}
 
-		throw new NotSupportedException($"AI provider '{provider}' is not supported.");
+		throw new UnsupportedAiProviderException(provider);
 	}
 }

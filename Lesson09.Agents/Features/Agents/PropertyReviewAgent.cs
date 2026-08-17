@@ -110,7 +110,7 @@ public sealed class PropertyReviewAgent
 			ModelId = model,
 			Temperature = conversation.Temperature,
 			MaxOutputTokens = conversation.MaxTokens,
-			Instructions = BuildInstructions(conversation.SystemPrompt)
+			Instructions = conversation.SystemPrompt
 		};
 
 		var runOptions = new ChatClientAgentRunOptions(chatOptions);
@@ -146,21 +146,5 @@ public sealed class PropertyReviewAgent
 				description: "Researches property-tax matters and can prepare property-review proposals.",
 				tools: _tools,
 				loggerFactory: _loggerFactory));
-	}
-
-	private static string BuildInstructions(string? conversationInstructions)
-	{
-		if (string.IsNullOrWhiteSpace(conversationInstructions))
-		{
-			return Instructions;
-		}
-
-		return
-			$"""
-			{Instructions}
-
-			Additional instructions for this conversation:
-			{conversationInstructions}
-			""";
 	}
 }

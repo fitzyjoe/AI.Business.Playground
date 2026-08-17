@@ -106,6 +106,7 @@ builder.Services.AddSingleton<PropertyReviewAgent>();
 
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<ConversationNotFoundExceptionHandler>();
+builder.Services.AddExceptionHandler<UnsupportedAiProviderExceptionHandler>();
 
 var app = builder.Build();
 

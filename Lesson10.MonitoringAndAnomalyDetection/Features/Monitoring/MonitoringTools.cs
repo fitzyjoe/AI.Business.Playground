@@ -20,7 +20,9 @@ public sealed class MonitoringTools(MonitoringDataSource _dataSource)
 		return _dataSource.GetRecentEvents(hours);
 	}
 	
-	[Description("Gets details about a deployment, including the service deployed and the changes included in that version.")]
+	[Description(
+		"Gets the changes included in a deployment. Use this when a deployment may be related to an anomaly and " +
+		"the deployment contents could help evaluate that hypothesis.")]
 	public DeploymentDetails? GetDeploymentDetails(
 		[Description("The deployed version, such as '4.8'.")] string version)
 	{

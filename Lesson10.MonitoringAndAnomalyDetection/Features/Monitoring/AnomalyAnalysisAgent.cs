@@ -23,9 +23,19 @@ public sealed class AnomalyAnalysisAgent
         - deployments, incidents, batch jobs, or maintenance near the anomaly time;
         - evidence that supports or contradicts a common cause.
 
-        If a deployment appears temporally related to an anomaly, use
-        get_deployment_details to inspect what changed before drawing conclusions.
-        
+        You have tools that can retrieve additional evidence.
+        Use a tool when its results could materially improve your investigation.
+        Do not tell the user to call a tool or recommend calling one; tools are available for you to use yourself.
+
+        If you identify a deployment as a plausible contributor to an anomaly, inspect its deployment details before
+        making a deployment-specific hypothesis.
+        Do not claim that a deployment change caused or contributed to an anomaly unless you have inspected the
+        deployment details.
+
+        RecommendedChecks are actions for a human operator after your investigation.
+        Never include calls to your own tools in RecommendedChecks. Use those tools yourself before producing the
+        assessment.
+
         Distinguish observations from hypotheses.
 
         Temporal proximity is evidence of correlation, not proof of causation.
@@ -50,8 +60,6 @@ public sealed class AnomalyAnalysisAgent
 
         AITool[] tools =
         [
-            AIFunctionFactory.Create(monitoringTools.GetMetricHistory, name: "get_metric_history"),
-            AIFunctionFactory.Create(monitoringTools.GetRecentOperationalEvents, name: "get_recent_operational_events"),
             AIFunctionFactory.Create(monitoringTools.GetDeploymentDetails, name: "get_deployment_details")
         ];
 

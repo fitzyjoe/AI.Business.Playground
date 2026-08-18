@@ -10,8 +10,6 @@ using Lesson10.MonitoringAndAnomalyDetection.Infrastructure.Ai.Providers;
 using Lesson10.MonitoringAndAnomalyDetection.Infrastructure.Conversations;
 using Lesson10.MonitoringAndAnomalyDetection.Infrastructure.ErrorHandling;
 using Lesson10.MonitoringAndAnomalyDetection.Infrastructure.Mcp;
-using Lesson10.MonitoringAndAnomalyDetection.Infrastructure.Monitoring;
-using Lesson10.MonitoringAndAnomalyDetection.Infrastructure.PropertyReviews;
 using Lesson10.MonitoringAndAnomalyDetection.Infrastructure.Rag;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Options;
@@ -33,6 +31,23 @@ builder.Services
 	.Validate(
 		options => !string.IsNullOrWhiteSpace(options.Model),
 		"An Ollama default model is required.")
+	.ValidateOnStart();
+
+// OpenAI
+builder.Services
+	.AddOptions<OpenAiOptions>()
+	.Bind(builder.Configuration.GetSection("OpenAI"))
+	.Validate(
+		options => !string.IsNullOrWhiteSpace(options.Model),
+		"An OpenAI default model is required.")
+	.ValidateOnStart();
+
+builder.Services
+	.AddOptions<MonitoringOptions>()
+	.Bind(builder.Configuration.GetSection("Monitoring"))
+	.Validate(
+		options => !string.IsNullOrWhiteSpace(options.Provider),
+		"A monitoring AI provider is required.")
 	.ValidateOnStart();
 
 // RAG Options
@@ -58,6 +73,7 @@ builder.Services.AddControllers()
 
 builder.Services.AddHttpClient();
 builder.Services.AddSingleton<IAiProvider, OllamaProvider>();
+builder.Services.AddSingleton<IAiProvider, OpenAiProvider>();
 builder.Services.AddSingleton<IAiProviderFactory, AiProviderFactory>();
 builder.Services.AddTransient<MessageHandler>();
 builder.Services.AddSingleton<IConversationRepository, InMemoryConversationRepository>();

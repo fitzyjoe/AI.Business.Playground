@@ -1,5 +1,4 @@
 using System.ComponentModel;
-using Lesson10.MonitoringAndAnomalyDetection.Infrastructure.Monitoring;
 
 namespace Lesson10.MonitoringAndAnomalyDetection.Features.Monitoring;
 

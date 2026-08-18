@@ -1,6 +1,4 @@
-using Lesson10.MonitoringAndAnomalyDetection.Features.Monitoring;
-
-namespace Lesson10.MonitoringAndAnomalyDetection.Infrastructure.Monitoring;
+namespace Lesson10.MonitoringAndAnomalyDetection.Features.Monitoring;
 
 public sealed class MonitoringDataSource
 {
@@ -77,6 +75,8 @@ public sealed class MonitoringDataSource
     
     public DeploymentDetails? GetDeploymentDetails(string version)
     {
+        Console.WriteLine($"*** GET DEPLOYMENT DETAILS CALLED: {version} ***");
+        
         return _deployments.FirstOrDefault(
             deployment => string.Equals(
                 deployment.Version,

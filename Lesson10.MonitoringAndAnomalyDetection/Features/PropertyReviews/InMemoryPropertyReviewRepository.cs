@@ -1,7 +1,6 @@
 using System.Collections.Concurrent;
-using Lesson10.MonitoringAndAnomalyDetection.Features.PropertyReviews;
 
-namespace Lesson10.MonitoringAndAnomalyDetection.Infrastructure.PropertyReviews;
+namespace Lesson10.MonitoringAndAnomalyDetection.Features.PropertyReviews;
 
 public sealed class InMemoryPropertyReviewRepository : IPropertyReviewRepository
 {

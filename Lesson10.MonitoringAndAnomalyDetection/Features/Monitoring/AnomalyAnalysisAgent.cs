@@ -2,6 +2,7 @@ using System.Text.Json;
 using Lesson10.MonitoringAndAnomalyDetection.Infrastructure.Ai;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
+using Microsoft.Extensions.Options;
 
 namespace Lesson10.MonitoringAndAnomalyDetection.Features.Monitoring;
 
@@ -52,10 +53,11 @@ public sealed class AnomalyAnalysisAgent
 
     public AnomalyAnalysisAgent(
         IAiProviderFactory aiProviderFactory,
+        IOptions<MonitoringOptions> options,
         MonitoringTools monitoringTools,
         ILoggerFactory loggerFactory)
     {
-        var provider = aiProviderFactory.GetProvider("ollama");
+        var provider = aiProviderFactory.GetProvider(options.Value.Provider);
         _model = provider.DefaultModel;
 
         AITool[] tools =

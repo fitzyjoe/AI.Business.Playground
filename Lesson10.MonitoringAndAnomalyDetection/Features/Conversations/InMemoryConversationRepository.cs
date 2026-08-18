@@ -1,6 +1,6 @@
 using System.Collections.Concurrent;
 
-namespace Lesson10.MonitoringAndAnomalyDetection.Infrastructure.Conversations;
+namespace Lesson10.MonitoringAndAnomalyDetection.Features.Conversations;
 
 using Lesson10.MonitoringAndAnomalyDetection.Features.Conversations;
 

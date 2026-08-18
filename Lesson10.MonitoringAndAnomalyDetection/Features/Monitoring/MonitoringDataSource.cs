@@ -71,8 +71,6 @@ public sealed class MonitoringDataSource
 
     public IReadOnlyList<MetricObservation> GetMetricHistory(string metric, int points)
     {
-        Console.WriteLine($"*** GET METRIC HISTORY CALLED: {metric} {points} ***");
-
         if (!_observations.TryGetValue(metric, out var observations))
         {
             return [];
@@ -85,8 +83,6 @@ public sealed class MonitoringDataSource
 
     public IReadOnlyList<OperationalEvent> GetRecentEvents(int hours)
     {
-        Console.WriteLine($"*** GET RECENT EVENTS CALLED: {hours} ***");
-
         var cutoff = DateTimeOffset.UtcNow.AddHours(-hours);
 
         return _events
@@ -97,8 +93,6 @@ public sealed class MonitoringDataSource
 
     public DeploymentDetails? GetDeploymentDetails(string version)
     {
-        Console.WriteLine($"*** GET DEPLOYMENT DETAILS CALLED: {version} ***");
-
         return _deployments.FirstOrDefault(
             deployment => string.Equals(
                 deployment.Version,

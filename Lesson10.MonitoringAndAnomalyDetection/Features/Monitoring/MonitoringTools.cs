@@ -10,6 +10,7 @@ public sealed class MonitoringTools(MonitoringDataSource _dataSource)
 		[Description("The number of recent observations to return.")] int points = 24)
 	{
 		points = Math.Clamp(points, 1, 168);
+		Console.WriteLine($"*** GET METRIC HISTORY CALLED: {metric} {points} ***");
 		return _dataSource.GetMetricHistory(metric, points);
 	}
 
@@ -18,6 +19,7 @@ public sealed class MonitoringTools(MonitoringDataSource _dataSource)
 		[Description("How many hours of operational events to return.")] int hours = 24)
 	{
 		hours = Math.Clamp(hours, 1, 168);
+		Console.WriteLine($"*** GET RECENT EVENTS CALLED: {hours} ***");
 		return _dataSource.GetRecentEvents(hours);
 	}
 	
@@ -27,6 +29,7 @@ public sealed class MonitoringTools(MonitoringDataSource _dataSource)
 	public DeploymentDetails? GetDeploymentDetails(
 		[Description("The deployed version, such as '4.8'.")] string version)
 	{
+		Console.WriteLine($"*** GET DEPLOYMENT DETAILS CALLED: {version} ***");
 		return _dataSource.GetDeploymentDetails(version);
 	}
 }

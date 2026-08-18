@@ -2,8 +2,6 @@ using System.Collections.Concurrent;
 
 namespace Lesson10.MonitoringAndAnomalyDetection.Features.Conversations;
 
-using Lesson10.MonitoringAndAnomalyDetection.Features.Conversations;
-
 public sealed class InMemoryConversationRepository : IConversationRepository
 {
 	private readonly ConcurrentDictionary<Guid, Conversation> _conversations = new();

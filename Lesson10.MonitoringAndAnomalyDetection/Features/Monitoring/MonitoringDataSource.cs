@@ -2,6 +2,24 @@ namespace Lesson10.MonitoringAndAnomalyDetection.Features.Monitoring;
 
 public sealed class MonitoringDataSource
 {
+    private const int ObservationCount = 100;
+
+    private static readonly double[] StableOffsets =
+    [
+        -1.0,
+        -0.5,
+        0.1,
+        0.7,
+        1.0,
+        0.4,
+        -0.8,
+        0.2,
+        0.9,
+        -0.3,
+        -0.6,
+        0.5
+    ];
+
     private readonly Dictionary<string, IReadOnlyList<MetricObservation>> _observations;
     private readonly IReadOnlyList<OperationalEvent> _events;
     private readonly IReadOnlyList<DeploymentDetails> _deployments;
@@ -12,9 +30,9 @@ public sealed class MonitoringDataSource
 
         _observations = new Dictionary<string, IReadOnlyList<MetricObservation>>(StringComparer.OrdinalIgnoreCase)
         {
-            ["documents_processed"] = BuildSeries("documents_processed", now, [1012, 995, 1008, 1021, 987, 1004, 1017, 992, 1009, 1024, 998, 1011, 412]),
-            ["average_processing_minutes"] = BuildSeries("average_processing_minutes", now, [4.8, 5.1, 4.9, 5.0, 5.2, 4.7, 5.1, 4.9, 5.0, 4.8, 5.2, 4.9, 12.6]),
-            ["error_rate_percent"] = BuildSeries("error_rate_percent", now, [1.1, 0.9, 1.0, 1.2, 0.8, 1.1, 0.9, 1.0, 1.1, 0.9, 1.0, 1.2, 7.8])
+            ["documents_processed"] = BuildSeries("documents_processed", now, ObservationCount, 1005, 20, 412),
+            ["average_processing_minutes"] = BuildSeries("average_processing_minutes", now, ObservationCount, 5.0, 0.3, 12.6),
+            ["error_rate_percent"] = BuildSeries("error_rate_percent", now, ObservationCount, 1.0, 0.2, 7.8)
         };
 
         _events =
@@ -34,7 +52,7 @@ public sealed class MonitoringDataSource
                 "maintenance",
                 "Routine database index maintenance completed successfully.")
         ];
-        
+
         _deployments =
         [
             new DeploymentDetails(
@@ -54,7 +72,7 @@ public sealed class MonitoringDataSource
     public IReadOnlyList<MetricObservation> GetMetricHistory(string metric, int points)
     {
         Console.WriteLine($"*** GET METRIC HISTORY CALLED: {metric} {points} ***");
-        
+
         if (!_observations.TryGetValue(metric, out var observations))
         {
             return [];
@@ -68,7 +86,7 @@ public sealed class MonitoringDataSource
     public IReadOnlyList<OperationalEvent> GetRecentEvents(int hours)
     {
         Console.WriteLine($"*** GET RECENT EVENTS CALLED: {hours} ***");
-        
+
         var cutoff = DateTimeOffset.UtcNow.AddHours(-hours);
 
         return _events
@@ -76,11 +94,11 @@ public sealed class MonitoringDataSource
             .OrderByDescending(item => item.Timestamp)
             .ToArray();
     }
-    
+
     public DeploymentDetails? GetDeploymentDetails(string version)
     {
         Console.WriteLine($"*** GET DEPLOYMENT DETAILS CALLED: {version} ***");
-        
+
         return _deployments.FirstOrDefault(
             deployment => string.Equals(
                 deployment.Version,
@@ -88,14 +106,31 @@ public sealed class MonitoringDataSource
                 StringComparison.OrdinalIgnoreCase));
     }
 
-    private static IReadOnlyList<MetricObservation> BuildSeries(string metric, DateTimeOffset now, IReadOnlyList<double> values)
+    private static IReadOnlyList<MetricObservation> BuildSeries(
+        string metric,
+        DateTimeOffset now,
+        int count,
+        double baseline,
+        double variation,
+        double anomalyValue)
     {
+        if (count < 2)
+        {
+            throw new ArgumentOutOfRangeException(nameof(count), "At least two observations are required.");
+        }
+
+        var values = Enumerable
+            .Range(0, count - 1)
+            .Select(index => baseline + StableOffsets[index % StableOffsets.Length] * variation)
+            .Append(anomalyValue)
+            .ToArray();
+
         return values
             .Select(
                 (value, index) =>
                     new MetricObservation(
                         metric,
-                        now.AddHours(index - values.Count + 1),
+                        now.AddHours(index - values.Length + 1),
                         value))
             .ToArray();
     }

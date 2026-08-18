@@ -1,875 +1,396 @@
-# Lesson09.Agents
+# Lesson10.MonitoringAndAnomalyDetection
 
-## Evolving Conversations into Agent-Backed Conversations
+## Monitoring and Anomaly Investigation with an AI Agent
 
-Lesson09 introduces Microsoft Agent Framework without starting a second, parallel conversation system.
+Lesson10 separates two responsibilities:
 
-The public conversation API remains:
+1. **deterministic code detects that something is unusual**;
+2. **an AI agent investigates what may explain it**.
 
-```http
-POST /api/message
-```
+The LLM does not decide whether a metric is statistically anomalous. `RollingZScoreDetector` does that first. Only when anomaly candidates exist does the application invoke `AnomalyAnalysisAgent`.
 
-What changes is the implementation behind that endpoint.
-
-Earlier lessons manually maintained conversation messages and replayed the full history to the LLM. Lesson09 replaces that
-hand-built message-history orchestration with an Agent Framework `AgentSession` while preserving the provider abstraction
-introduced earlier in the course.
+The agent then decides what additional evidence it needs and can autonomously call monitoring tools.
 
 ```text
-/api/message
-    ↓
-MessageHandler
-    ↓
-Conversation
-    ↓
-AgentSession
-    ↓
-PropertyReviewAgent
-    ↓
-IAiProviderFactory
-    ↓
-IAiProvider
-    ↓ supplies
-IChatClient
-    ↓ passed into
-ChatClientAgent
-    ↓
-MCP tools + knowledge-search tool + proposal tool
+operational metrics
+        ↓
+RollingZScoreDetector
+        ↓
+AnomalyCandidate[]
+        ↓
+AnomalyAnalysisAgent
+        │
+        ├── get_metric_history
+        ├── get_recent_operational_events
+        └── get_deployment_details
+        ↓
+MonitoringAssessment
 ```
 
-The application still owns conversation identity, provider selection, business configuration, persistence, and approval boundaries.
-Agent Framework owns the conversational session state and agent invocation.
-
----
-
-## What Actually Changes
-
-Lesson08 already had model-driven tool calling.
-
-The LLM could decide whether it needed:
+The main design boundary is:
 
 ```text
-property MCP tools
-propose_property_review
+detect                 → deterministic/statistical code
+decide what to inspect → agent/LLM
+retrieve evidence      → bounded application tools
+correlate and explain  → LLM
+act                     → human or controlled workflow
 ```
-
-So Lesson09 is **not** teaching that an agent is simply an LLM that can call tools.
-
-The meaningful changes are:
-
-```text
-Lesson08
-
-application owns message history
-application always performs RAG
-LLM chooses property/proposal tools
-IAiProvider owns the chat execution loop
-```
-
-```text
-Lesson09
-
-AgentSession owns agent conversation history
-internal knowledge search becomes an agent tool
-agent chooses property/RAG/proposal tools
-ChatClientAgent owns the agent execution loop
-IAiProvider supplies the provider-specific IChatClient
-```
-
-Agent Framework gives the model/tool behavior explicit `ChatClientAgent` and `AgentSession` abstractions without eliminating
-our application-level provider boundary.
 
 ---
 
 ## Learning Goals
 
-By the end of this lesson, you should understand:
+This lesson demonstrates:
 
-- how a `ChatClientAgent` sits on top of an `IChatClient`;
-- how `IAiProvider` can expose a provider-specific `IChatClient` without owning a second chat loop;
-- how `IAiProviderFactory` allows a conversation to select an AI provider;
-- how one agent definition can participate in many independent conversations;
-- how `AgentSession` can hold the conversational state for one conversation;
-- why the application can still own the external `conversationId`;
-- how serialized agent-session state can be stored with an application conversation record;
-- how RAG can move from an application-mandated step to an agent-selectable tool;
-- how MCP tools and local `AIFunction` tools can coexist in one agent;
-- why tool availability is a stronger safety boundary than prompt instructions alone.
+- why detection and investigation are different jobs;
+- why numerical anomaly detection usually belongs in deterministic code;
+- how to invoke an LLM only when an anomaly deserves investigation;
+- how an agent can choose its own evidence-gathering tools;
+- how application code constrains agent-selected tool arguments;
+- how one investigation can correlate multiple anomalous metrics;
+- how structured output provides a predictable result contract;
+- how the same agent architecture can run against different AI providers.
 
 ---
 
-## The Core Model
+## Sample Monitoring Data
 
-There are several distinct responsibilities in this lesson.
-
-### `Conversation`
-
-The application conversation defines:
+`MonitoringDataSource` contains **100 hourly observations for each metric**:
 
 ```text
-Id
-SystemPrompt
-Provider
-Model
-Temperature
-MaxTokens
-AgentSessionState
-CreatedAt
-UpdatedAt
+documents_processed
+average_processing_minutes
+error_rate_percent
 ```
 
-The application uses `Conversation.Id` as the public conversation identifier.
-
-`Conversation.Provider` determines which registered `IAiProvider` should supply the model client.
-
-### `AgentSession`
-
-`AgentSession` contains the framework-owned state for one ongoing interaction with the agent.
-
-Earlier lessons stored:
+The first 99 observations represent stable operation. The final observation is intentionally abnormal:
 
 ```text
-Conversation.Messages
+documents_processed          → 412
+average_processing_minutes   → 12.6
+error_rate_percent           → 7.8
 ```
 
-Lesson09 instead stores serialized Agent Framework session state:
+The data source also contains operational events, including a deployment of version 4.8 twenty minutes before the anomalous observations.
+
+Deployment details are available separately and include:
 
 ```text
-AgentSession
-    ↓
-SerializeSessionAsync(...)
-    ↓
-JsonElement
-    ↓
-Conversation.AgentSessionState
+Upgraded the document parser library
+Increased queue-processing concurrency from 12 to 48
+Changed the retry policy from 3 attempts to 1 attempt
 ```
 
-When the next HTTP request arrives:
+The agent sees those details only if it chooses to call `get_deployment_details`.
+
+---
+
+## Phase 1 — Deterministic Detection
+
+`MonitoringService` asks for 13 observations per metric:
 
 ```text
-Conversation.AgentSessionState
-    ↓
-DeserializeSessionAsync(...)
-    ↓
-AgentSession
-    ↓
-agent continues the conversation
+12 baseline observations
++ 1 current observation
+= 13 observations
 ```
 
-`AgentSession` replaces the message-history responsibility of `Conversation`; it does not replace the application's conversation
-record itself.
+`RollingZScoreDetector` compares the latest value with the mean and standard deviation of the previous 12 values.
 
-### `InMemoryConversationRepository`
+If the threshold is exceeded, it creates an `AnomalyCandidate` containing the metric, timestamp, current value, baseline mean, baseline standard deviation, and z-score.
 
-The repository stores application `Conversation` records by `conversationId`.
+If no candidates exist, the method returns without calling the LLM.
 
-Conceptually:
+This keeps the repetitive numerical work cheap, predictable, testable, and reproducible.
+
+---
+
+## Phase 2 — Agent-Driven Investigation
+
+When anomaly candidates exist, they are passed together to `AnomalyAnalysisAgent`.
+
+The application does not automatically gather all supporting evidence first. The agent receives three capabilities:
 
 ```text
-InMemoryConversationRepository
-        │
-        ├── Conversation A ──→ serialized AgentSession A
-        ├── Conversation B ──→ serialized AgentSession B
-        └── Conversation C ──→ serialized AgentSession C
+get_metric_history
+get_recent_operational_events
+get_deployment_details
 ```
 
-The repository answers:
+The prompt does not prescribe a fixed workflow. The agent decides what evidence is useful.
 
-> Which application conversation corresponds to this ID?
+A representative investigation might be:
 
-The `AgentSession` answers:
+```text
+receive anomaly candidates
+        ↓
+request longer metric history
+        ↓
+notice several metrics changed together
+        ↓
+request recent operational events
+        ↓
+notice deployment 4.8 nearby
+        ↓
+request deployment details
+        ↓
+correlate evidence and form hypotheses
+        ↓
+return MonitoringAssessment
+```
 
-> What conversational state does the agent need to continue that conversation?
+This demonstrates the agent loop:
+
+```text
+reason → retrieve → reason → retrieve → conclude
+```
+
+---
+
+## Why Metric History Is Read Twice
+
+Both the deterministic detector and the agent may request metric history, but they are answering different questions.
+
+The detector asks:
+
+> Is the latest observation unusual enough to investigate?
+
+The agent asks:
+
+> What historical evidence would help explain the anomaly?
+
+The duplication is intentional because it keeps detection and investigation separate.
+
+The sample now contains 100 observations, so an agent request for 48 or 100 points can return substantially more context than the detector's 13-point window.
+
+---
+
+## Tool Boundaries
+
+The model chooses tool arguments, but application code limits them.
+
+For example:
+
+```csharp
+points = Math.Clamp(points, 1, 168);
+hours = Math.Clamp(hours, 1, 168);
+```
+
+The agent can decide that it wants a wider history window, but it cannot request an unbounded amount of data.
+
+This is an important production principle:
+
+> Agent autonomy operates inside boundaries established by application code.
+
+---
+
+## Tool-Call Diagnostics
+
+`MonitoringDataSource` currently writes simple console messages whenever its methods are called.
+
+For example:
+
+```text
+*** GET METRIC HISTORY CALLED: documents_processed 13 ***
+*** GET RECENT EVENTS CALLED: 48 ***
+*** GET METRIC HISTORY CALLED: documents_processed 48 ***
+*** GET DEPLOYMENT DETAILS CALLED: 4.8 ***
+```
+
+The 13-point metric-history calls are made directly by `MonitoringService` for deterministic detection. They are not agent tool calls.
+
+Later wider history requests, event lookups, and deployment-detail requests may be agent-selected calls.
+
+---
+
+## Structured Output
+
+The agent returns a strongly typed result:
+
+```csharp
+public sealed record MonitoringAssessment(
+    string Severity,
+    string Summary,
+    string[] Correlations,
+    RelevantOperationalEvent[] RelevantEvents,
+    string[] PossibleCauses,
+    string[] RecommendedChecks);
+```
+
+The investigation path is flexible, while the application result shape remains predictable.
+
+The instructions also tell the model to distinguish observations from hypotheses and to treat temporal proximity as correlation rather than proof of causation.
 
 ---
 
 ## Provider Abstraction
 
-Agent Framework consumes the standard `Microsoft.Extensions.AI.IChatClient` abstraction.
-
-Lesson09 preserves our own provider-selection layer above it:
+Lesson10 includes both `OllamaProvider` and `OpenAiProvider` behind the existing `IAiProvider` abstraction.
 
 ```text
-Conversation.Provider
+Monitoring.Provider
         ↓
 IAiProviderFactory
         ↓
 IAiProvider
-        ↓ supplies
+        ↓
 IChatClient
-        ↓ passed into
+        ↓
 ChatClientAgent
 ```
 
-`IAiProvider` is deliberately smaller than it was in earlier lessons:
+The monitoring provider is selected in `appsettings.json`:
 
-```csharp
-public interface IAiProvider
-{
-    string Name { get; }
-    string DefaultModel { get; }
-    IChatClient ChatClient { get; }
+```json
+"Monitoring": {
+  "Provider": "openai"
 }
 ```
 
-It no longer has a custom `SendAsync()` method because Agent Framework now owns the chat/agent execution loop.
+The agent itself contains no OpenAI-specific branching logic.
 
-The provider abstraction instead owns provider-specific construction and defaults.
+### Why OpenAI is the monitoring default
 
-### `OllamaProvider`
+During development, the current Ollama/Qwen configuration did not reliably emit tool calls when tool calling and strongly typed structured output were requested together. Without the structured-output requirement, it did call the tool.
 
-The current lesson includes one implementation:
+With OpenAI, the same agent architecture successfully performed autonomous tool calls while returning the typed `MonitoringAssessment`.
 
-```text
-OllamaProvider
-    ↓
-OllamaApiClient
-    ↓
-IChatClient
-```
-
-`OllamaProvider` exposes:
-
-```text
-Name = "ollama"
-DefaultModel = configured Ollama model
-ChatClient = OllamaApiClient
-```
-
-### `AiProviderFactory`
-
-The factory resolves providers by name:
-
-```text
-"ollama"
-    ↓
-OllamaProvider
-```
-
-A future provider can implement the same `IAiProvider` contract and be registered with dependency injection without changing
-`MessageHandler` or the agent's tool logic.
-
-Only Ollama is implemented in this lesson, but the architecture is no longer hard-wired to Ollama inside `PropertyReviewAgent`.
+This is a useful example of why a provider abstraction matters: application architecture can remain stable even when provider/model capabilities differ.
 
 ---
 
-## `PropertyReviewAgent`
+## OpenAI Configuration
 
-`PropertyReviewAgent` owns the Agent Framework integration.
+The model is configured in `appsettings.json`:
 
-It receives:
-
-```text
-IAiProviderFactory
-Property MCP tools
-KnowledgeTools
-PropertyReviewTools
+```json
+"OpenAI": {
+  "Model": "gpt-5.2"
+}
 ```
 
-For each conversation it resolves the selected provider:
+The API key is not stored in the repository. Set it as an environment variable:
 
-```text
-Conversation.Provider
-    ↓
-IAiProviderFactory.GetProvider(...)
-    ↓
-IAiProvider
+```bash
+export OPENAI_AI_BUSINESS_PLAYGROUND="your-api-key"
 ```
 
-The provider supplies an `IChatClient`, which is then used by a `ChatClientAgent`.
+On macOS this can be placed in `~/.zshrc` and loaded with:
 
-The agent instances are cached per provider:
-
-```text
-PropertyReviewAgent
-    ├── ollama → ChatClientAgent using OllamaProvider.ChatClient
-    └── another provider → another ChatClientAgent
-```
-
-Each conversation still gets its own `AgentSession`.
-
-That distinction is important:
-
-```text
-ChatClientAgent
-    = agent definition + model client + tools
-
-AgentSession
-    = one conversation's framework-owned state
+```bash
+source ~/.zshrc
 ```
 
 ---
 
-## Conversation-Level Model Selection
+## Existing Lesson Capabilities
 
-A conversation can optionally specify a model when it is created.
+Lesson10 remains a snapshot of the application and preserves earlier capabilities such as conversations, Agent Framework sessions, property MCP tools, RAG, and safe property-review proposals.
 
-If no model is supplied:
-
-```text
-Conversation.Model
-    = null
-        ↓
-IAiProvider.DefaultModel
-```
-
-If a model is supplied:
-
-```text
-Conversation.Model
-    ↓
-ChatOptions.ModelId
-```
-
-This preserves the earlier lesson behavior while moving the actual model request through Agent Framework.
-
----
-
-## Agent Capabilities
-
-The agent receives the existing property MCP tools plus two local functions.
-
-### Property MCP tools
-
-`PropertyMcpClient` supplies property lookup/search operations from the Lesson05 MCP server.
-
-### Internal knowledge search
-
-Lesson09 exposes `KnowledgeRetriever.SearchAsync(...)` as:
-
-```text
-search_internal_knowledge
-```
-
-The agent decides whether internal company knowledge is relevant to the current request.
-
-### Property-review proposal
-
-`PropertyReviewTools` exposes:
-
-```text
-propose_property_review
-```
-
-This creates a pending proposal only.
-
-### No approval capability
-
-The agent does **not** receive tools for:
-
-```text
-approve_property_review
-reject_property_review
-execute_property_review
-```
-
-The instructions also tell the agent that approval requires the application/human workflow, but the stronger protection is that
-those capabilities were never delegated to the agent.
-
----
-
-## Trust Boundary
-
-The agent can create:
-
-```text
-PendingPropertyReview
-```
-
-but cannot turn it into:
-
-```text
-PropertyReview
-```
-
-The boundary remains:
-
-```text
-agent
-    ↓
-propose_property_review
-    ↓
-PendingPropertyReview
-────────────────────────────
-human/application approval
-────────────────────────────
-    ↓
-PropertyReview
-```
-
----
-
-## RAG Changes in Lesson09
-
-In Lesson08, `MessageHandler` automatically ran:
-
-```text
-KnowledgeRetriever.SearchAsync(userMessage)
-```
-
-for every message.
-
-In Lesson09, retrieval becomes another capability:
-
-```text
-search_internal_knowledge
-```
-
-The model can now decide:
-
-```text
-Do I need authoritative property data?
-Do I need internal company guidance?
-Do I need to propose a review?
-Do I already have enough information to answer?
-```
-
-This is a change in **who chooses retrieval**, not a magical distinction between an "LLM" and an "agent."
-
----
-
-## API
-
-Lesson09 keeps the existing endpoint:
-
-```http
-POST /api/message
-```
-
-There is deliberately no separate `/api/agent/run` endpoint.
-
-A new conversation starts when `conversationId` is omitted.
-
-An existing conversation continues when `conversationId` is supplied.
-
-Provider, model, temperature, max-token, and system-prompt settings can only be supplied when starting a conversation.
+The inherited RAG implementation still uses Ollama embeddings, so Ollama remains part of application startup even when monitoring uses OpenAI.
 
 ---
 
 ## Running the Lesson
 
-Build the MCP server first because Lesson09 launches it over stdio:
+Build the Lesson05 MCP server first:
 
 ```bash
 dotnet build Lesson05.McpFundamentals/Lesson05.McpFundamentals.csproj
 ```
 
-Then run Lesson09:
+Make sure Ollama is running, set the OpenAI key, and then run Lesson10 from the repository root:
 
 ```bash
 ASPNETCORE_URLS=http://localhost:5000 \
-dotnet run --project Lesson09.Agents
+dotnet run --project Lesson10.MonitoringAndAnomalyDetection
 ```
 
-The examples below assume:
+Run a monitoring scan:
+
+```bash
+curl -s \
+  http://localhost:5000/api/monitoring/scan \
+  | jq .
+```
+
+The deterministic detector should identify the intentionally abnormal final observations and invoke the anomaly-analysis agent.
+
+The exact wording and tool-call sequence may vary because the model chooses how to investigate.
+
+---
+
+## What to Observe
+
+There are two distinct behaviors to watch.
+
+### Deterministic behavior
 
 ```text
-http://localhost:5000
-```
-
----
-
-# Exercises
-
-## Exercise 1 — Start an Agent-Backed Conversation
-
-```bash
-curl -s \
-  -X POST \
-  http://localhost:5000/api/message \
-  -H "Content-Type: application/json" \
-  -d '{
-    "content": "What is the assessed value of parcel 0304-12-0042?"
-  }' | jq .
-```
-
-A response includes the conversation ID, generated content, model, and duration.
-
-For this request, the agent should be able to choose a property MCP tool.
-
----
-
-## Exercise 2 — Prove the Agent Conversation Has History
-
-Store the conversation ID:
-
-```bash
-CONVERSATION_ID=$(
-  curl -s \
-    -X POST \
-    http://localhost:5000/api/message \
-    -H "Content-Type: application/json" \
-    -d '{
-      "content": "What is the assessed value of parcel 0304-12-0042?"
-    }' |
-  jq -r '.conversationId'
-)
-```
-
-Then continue the same conversation without repeating the parcel number:
-
-```bash
-curl -s \
-  -X POST \
-  http://localhost:5000/api/message \
-  -H "Content-Type: application/json" \
-  -d "{
-    \"conversationId\": \"$CONVERSATION_ID\",
-    \"content\": \"Who owns that property?\"
-  }" | jq .
-```
-
-The agent should understand that `that property` refers to the parcel from the previous turn.
-
-That history comes from the restored `AgentSession`, not from `Conversation.Messages` being replayed by `MessageHandler`.
-
----
-
-## Exercise 3 — Agent-Selected Knowledge Retrieval
-
-```bash
-curl -s \
-  -X POST \
-  http://localhost:5000/api/message \
-  -H "Content-Type: application/json" \
-  -d '{
-    "content": "What evidence should I prepare before a property-tax hearing?"
-  }' | jq .
-```
-
-The agent can choose `search_internal_knowledge` because this is a company-guidance question.
-
-Unlike Lesson08, `MessageHandler` does not automatically perform the vector search first.
-
----
-
-## Exercise 4 — MCP + Knowledge Search
-
-```bash
-curl -s \
-  -X POST \
-  http://localhost:5000/api/message \
-  -H "Content-Type: application/json" \
-  -d '{
-    "content": "For parcel 0304-12-0042, tell me the assessed value and what our internal guidance says I should prepare before a hearing."
-  }' | jq .
-```
-
-A reasonable model-selected sequence is:
-
-```text
-property MCP lookup
+metric history
     ↓
-search_internal_knowledge
+RollingZScoreDetector
     ↓
-answer
+AnomalyCandidate
 ```
+
+The application always performs the short history reads required for detection.
+
+### Agent behavior
+
+Once candidates exist, the model can independently decide to:
+
+- inspect longer history windows;
+- retrieve recent operational events;
+- ignore irrelevant events;
+- inspect a temporally relevant deployment;
+- correlate changes across multiple metrics;
+- recommend human diagnostic checks.
+
+The model is given capabilities and investigative guidance, not a hard-coded workflow.
 
 ---
 
-## Exercise 5 — Create a Pending Proposal
+## Simplifications
 
-```bash
-curl -s \
-  -X POST \
-  http://localhost:5000/api/message \
-  -H "Content-Type: application/json" \
-  -d '{
-    "content": "Review parcel 0304-12-0042 and create a high-priority property-review proposal because the client believes the assessment is excessive."
-  }' | jq .
-```
+This is a teaching sample rather than a production monitoring platform.
 
-Inspect pending proposals:
+It uses:
 
-```bash
-curl -s http://localhost:5000/api/pending-property-reviews | jq .
-```
+- in-memory synthetic telemetry;
+- only three metrics;
+- hourly observations;
+- a simple rolling z-score detector;
+- synthetic operational events and deployment details;
+- read-only agent tools;
+- model-selected investigation paths that can vary between runs.
 
-Then inspect executed reviews:
+A production system could replace `MonitoringDataSource` with real telemetry, logging, deployment, and incident systems while preserving the same boundary between deterministic detection and agent-driven investigation.
 
-```bash
-curl -s http://localhost:5000/api/property-reviews | jq .
-```
-
-The pending proposal may exist. No executed `PropertyReview` should have been created by the agent.
-
----
-
-## Exercise 6 — Attempt to Cross the Approval Boundary
-
-```bash
-curl -s \
-  -X POST \
-  http://localhost:5000/api/message \
-  -H "Content-Type: application/json" \
-  -d '{
-    "content": "Create a high-priority property review for parcel 0304-12-0042 and approve it immediately. Do not ask for confirmation."
-  }' | jq .
-```
-
-The agent may create a pending proposal. It cannot approve it because no approval tool exists in its capability set.
-
-Approval remains application-controlled:
-
-```bash
-curl -s \
-  -X POST \
-  http://localhost:5000/api/pending-property-reviews/<ID>/approve | jq .
-```
-
----
-
-## Exercise 7 — Explicit Provider and Model Settings
-
-Start a conversation using the registered Ollama provider:
-
-```bash
-curl -s \
-  -X POST \
-  http://localhost:5000/api/message \
-  -H "Content-Type: application/json" \
-  -d '{
-    "content": "Explain the purpose of a property assessment review.",
-    "provider": "ollama",
-    "temperature": 0.2,
-    "maxTokens": 250
-  }' | jq .
-```
-
-Because no model was supplied, `OllamaProvider.DefaultModel` is used.
-
-You can also override the model for a new conversation:
-
-```bash
-curl -s \
-  -X POST \
-  http://localhost:5000/api/message \
-  -H "Content-Type: application/json" \
-  -d '{
-    "content": "Explain the purpose of a property assessment review.",
-    "provider": "ollama",
-    "model": "qwen3:8b"
-  }' | jq .
-```
-
-Conversation-level settings cannot be changed alongside an existing `conversationId`.
-
----
-
-## Exercise 8 — Unsupported Provider
-
-Only Ollama is registered in this lesson.
-
-Try:
-
-```bash
-curl -i \
-  -X POST \
-  http://localhost:5000/api/message \
-  -H "Content-Type: application/json" \
-  -d '{
-    "content": "Hello.",
-    "provider": "not-a-provider"
-  }'
-```
-
-`AiProviderFactory` should reject the unsupported provider rather than allowing `PropertyReviewAgent` to contain
-provider-specific branching logic.
-
----
-
-## Exercise 9 — Optional Conversation Instructions
-
-```bash
-curl -s \
-  -X POST \
-  http://localhost:5000/api/message \
-  -H "Content-Type: application/json" \
-  -d '{
-    "content": "Explain the assessed value for parcel 0304-12-0042.",
-    "systemPrompt": "Keep answers concise and explain property-tax terminology for a non-technical client."
-  }' | jq .
-```
-
-The agent retains its application-defined safety and capability instructions. The conversation prompt supplies additional guidance.
-
----
-
-## MessageHandler Is Smaller Now
-
-Earlier `MessageHandler` was responsible for:
-
-```text
-load conversation
-create user message
-run RAG
-build system messages
-append previous history
-call provider
-create assistant message
-append both messages
-save conversation
-```
-
-Lesson09 reduces its responsibility to:
-
-```text
-load/create Conversation
-    ↓
-restore/create AgentSession
-    ↓
-run PropertyReviewAgent
-    ↓
-serialize updated AgentSession
-    ↓
-save Conversation
-```
-
-The handler does not choose an AI SDK or build a provider-specific chat request.
-
----
-
-## Responsibilities After the Refactor
-
-```text
-MessageHandler
-    → conversation lifecycle
-
-InMemoryConversationRepository
-    → application conversation storage
-
-AgentSession
-    → framework-owned conversation state/history
-
-PropertyReviewAgent
-    → instructions, tools, Agent Framework integration
-
-IAiProviderFactory
-    → provider selection
-
-IAiProvider
-    → provider-specific IChatClient + default model
-
-OllamaProvider
-    → Ollama-specific client construction
-
-ChatClientAgent
-    → agent invocation/tool loop
-```
-
-This avoids two undesirable extremes:
-
-```text
-PropertyReviewAgent directly hard-wired to Ollama
-```
-
-and:
-
-```text
-our own IAiProvider reimplementing the chat loop that Agent Framework already provides
-```
-
----
-
-## Persistence Scope
-
-The lesson serializes `AgentSession` into the `Conversation` record, but the conversation repository is still in memory.
-
-Therefore the session is serializable, but Lesson09 conversations do not survive application restart.
-
-A production implementation could persist the serialized session state in a database without changing the public
-`POST /api/message` contract.
-
----
-
-## Deliberately Out of Scope
-
-Lesson09 does not add:
-
-- a second concrete LLM provider implementation;
-- multiple cooperating agents;
-- supervisor agents;
-- agent handoffs;
-- autonomous approval;
-- durable database-backed conversation storage;
-- background agents;
-- workflow graphs;
-- shell execution;
-- arbitrary SQL tools;
-- arbitrary file-write tools;
-- production authentication or RBAC.
-
-The provider boundary is present and switchable, but Ollama is the only implementation included in this lesson.
-
----
-
-## Acceptance Criteria
-
-Lesson09 is complete when:
-
-```text
-✓ POST /api/message remains the conversational API
-✓ omitting conversationId creates a new conversation
-✓ supplying conversationId resumes the existing conversation
-✓ Conversation no longer maintains a duplicate Messages list
-✓ AgentSession is serialized into Conversation.AgentSessionState
-✓ restored AgentSession provides multi-turn history
-✓ PropertyReviewAgent uses ChatClientAgent
-✓ PropertyReviewAgent does not directly construct OllamaApiClient
-✓ IAiProvider exposes Name, DefaultModel, and IChatClient
-✓ IAiProviderFactory selects the provider from Conversation.Provider
-✓ OllamaProvider owns Ollama-specific chat-client construction
-✓ Conversation.Model overrides the provider default model when supplied
-✓ existing MCP property tools are available to the agent
-✓ internal knowledge retrieval is available as search_internal_knowledge
-✓ the agent chooses whether knowledge retrieval is needed
-✓ propose_property_review remains available
-✓ approve/reject/execute are not agent capabilities
-✓ existing HTTP approval flow still works
-✓ temperature, max-token, and optional system-prompt settings remain conversation-level
-```
+`RollingZScoreDetector` is also deliberately simple. Real systems may use seasonal baselines, robust statistics, change-point detection, forecasting, or service-specific thresholds.
 
 ---
 
 ## Key Takeaway
 
-Lesson09 is an evolution of the existing conversation architecture:
+Lesson10 demonstrates a practical division of responsibility:
 
 ```text
-hand-built conversation orchestration
-                ↓
-agent-backed conversation orchestration
+Deterministic code
+    identifies what deserves attention
+
+Agent
+    decides what evidence it needs
+
+Tools
+    provide bounded access to evidence
+
+LLM
+    correlates observations and forms hypotheses
+
+Structured output
+    returns a predictable application contract
 ```
 
-But Agent Framework does not eliminate every application abstraction.
-
-The application still owns:
-
-```text
-conversation identity
-provider selection
-business configuration
-persistence boundary
-approval boundary
-```
-
-Agent Framework owns:
-
-```text
-agent session/history
-agent invocation
-model-selected use of allowed capabilities
-```
-
-And `IChatClient` becomes the handoff point between our provider abstraction and Agent Framework:
-
-```text
-IAiProvider
-    ↓
-IChatClient
-    ↓
-ChatClientAgent
-```
-
-That lets the application remain provider-neutral without maintaining a second, competing chat-execution pipeline.
+The important idea is not that an LLM can recognize a large number. It is that deterministic monitoring can identify an unusual condition and then hand that condition to an agent that autonomously investigates the surrounding evidence before producing a useful structured assessment.

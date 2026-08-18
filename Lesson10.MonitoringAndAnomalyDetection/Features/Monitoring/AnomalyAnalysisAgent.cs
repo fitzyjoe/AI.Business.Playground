@@ -62,6 +62,8 @@ public sealed class AnomalyAnalysisAgent
 
         AITool[] tools =
         [
+            AIFunctionFactory.Create(monitoringTools.GetMetricHistory, name: "get_metric_history"),
+            AIFunctionFactory.Create(monitoringTools.GetRecentOperationalEvents, name: "get_recent_operational_events"),
             AIFunctionFactory.Create(monitoringTools.GetDeploymentDetails, name: "get_deployment_details")
         ];
 
@@ -75,30 +77,25 @@ public sealed class AnomalyAnalysisAgent
     }
 
     public async Task<MonitoringAssessment> AnalyzeAsync(
-        MonitoringSnapshot snapshot,
+        IReadOnlyList<AnomalyCandidate> anomalies,
         CancellationToken cancellationToken = default)
     {
         var prompt =
             $"""
-             Investigate this monitoring snapshot.
+             Investigate these statistically detected anomalies.
 
              Anomalies:
-             {JsonSerializer.Serialize(snapshot.Anomalies)}
+             {JsonSerializer.Serialize(anomalies)}
 
-             Metric history:
-             {JsonSerializer.Serialize(snapshot.MetricHistory)}
+             Determine whether the anomalies appear related and identify plausible explanations.
 
-             Recent operational events:
-             {JsonSerializer.Serialize(snapshot.RecentEvents)}
+             Use your available tools to gather whatever additional evidence is useful.
 
-             Determine whether the anomalies appear related.
-
-             Look for correlations between:
-             - anomalies occurring at approximately the same time;
-             - throughput, latency, and error changes;
-             - recent deployments, incidents, batch jobs, or maintenance.
-
-             Identify which operational events appear relevant and explain why.
+             Consider:
+             - whether affected metrics changed at approximately the same time;
+             - whether their recent history suggests a shared event;
+             - whether deployments, incidents, batch jobs, or maintenance occurred nearby;
+             - whether details of a relevant deployment provide a plausible mechanism.
 
              Distinguish observed evidence from hypotheses.
              Temporal proximity is evidence of correlation, not proof of causation.

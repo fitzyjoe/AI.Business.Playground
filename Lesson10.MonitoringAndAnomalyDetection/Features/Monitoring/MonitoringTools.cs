@@ -9,6 +9,7 @@ public sealed class MonitoringTools(MonitoringDataSource _dataSource)
 		[Description("The metric name.")] string metric,
 		[Description("The number of recent observations to return.")] int points = 24)
 	{
+		points = Math.Clamp(points, 1, 168);
 		return _dataSource.GetMetricHistory(metric, points);
 	}
 
@@ -16,6 +17,7 @@ public sealed class MonitoringTools(MonitoringDataSource _dataSource)
 	public IReadOnlyList<OperationalEvent> GetRecentOperationalEvents(
 		[Description("How many hours of operational events to return.")] int hours = 24)
 	{
+		hours = Math.Clamp(hours, 1, 168);
 		return _dataSource.GetRecentEvents(hours);
 	}
 	

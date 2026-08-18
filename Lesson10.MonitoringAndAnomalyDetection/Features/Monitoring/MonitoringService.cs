@@ -34,17 +34,8 @@ public sealed class MonitoringService(
 			return null;
 		}
 
-		var metricHistory = candidates.ToDictionary(
-			candidate => candidate.Metric,
-			candidate => _dataSource.GetMetricHistory(candidate.Metric, 24));
-
-		var snapshot = new MonitoringSnapshot(
-			candidates,
-			metricHistory,
-			_dataSource.GetRecentEvents(6));
-
 		return await _anomalyAnalysisAgent.AnalyzeAsync(
-			snapshot,
+			candidates,
 			cancellationToken);
 	}
 }

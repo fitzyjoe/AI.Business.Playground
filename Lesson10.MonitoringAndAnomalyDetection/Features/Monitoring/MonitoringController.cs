@@ -7,7 +7,7 @@ namespace Lesson10.MonitoringAndAnomalyDetection.Features.Monitoring;
 public sealed class MonitoringController(MonitoringService _monitoringService) : ControllerBase
 {
 	[HttpGet("scan")]
-	public async Task<ActionResult<IReadOnlyList<AnomalyAssessment>>> ScanAsync(CancellationToken cancellationToken)
+	public async Task<ActionResult<MonitoringAssessment?>> ScanAsync(CancellationToken cancellationToken)
 	{
 		return Ok(await _monitoringService.ScanAsync(cancellationToken));
 	}

@@ -7,7 +7,6 @@ using Lesson10.MonitoringAndAnomalyDetection.Features.Monitoring;
 using Lesson10.MonitoringAndAnomalyDetection.Features.PropertyReviews;
 using Lesson10.MonitoringAndAnomalyDetection.Infrastructure.Ai;
 using Lesson10.MonitoringAndAnomalyDetection.Infrastructure.Ai.Providers;
-using Lesson10.MonitoringAndAnomalyDetection.Infrastructure.Conversations;
 using Lesson10.MonitoringAndAnomalyDetection.Infrastructure.ErrorHandling;
 using Lesson10.MonitoringAndAnomalyDetection.Infrastructure.Mcp;
 using Lesson10.MonitoringAndAnomalyDetection.Infrastructure.Rag;

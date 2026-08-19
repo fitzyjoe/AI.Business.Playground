@@ -1,4 +1,4 @@
-﻿
+
 Microsoft Visual Studio Solution File, Format Version 12.00
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lesson01.BasicPrompting", "Lesson01.BasicPrompting\Lesson01.BasicPrompting.csproj", "{965024DA-54AF-48B4-9546-053FA0D0D344}"
 EndProject
@@ -21,6 +21,8 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lesson10.MonitoringAndAnomalyDetection", "Lesson10.MonitoringAndAnomalyDetection\Lesson10.MonitoringAndAnomalyDetection.csproj", "{3EA84A32-40B1-4D3A-A06A-84764884E12F}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lesson11.ProductionAiPlatform", "Lesson11.ProductionAiPlatform\Lesson11.ProductionAiPlatform.csproj", "{D1AA89ED-F20D-42BA-B1B3-D6BD3E66180C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lesson11.ProductionAiPlatform.Tests", "Lesson11.ProductionAiPlatform.Tests\Lesson11.ProductionAiPlatform.Tests.csproj", "{6F0D9D0E-4558-4DB5-AE70-C89166A3BD4B}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -72,5 +74,9 @@ Global
 		{D1AA89ED-F20D-42BA-B1B3-D6BD3E66180C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D1AA89ED-F20D-42BA-B1B3-D6BD3E66180C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D1AA89ED-F20D-42BA-B1B3-D6BD3E66180C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6F0D9D0E-4558-4DB5-AE70-C89166A3BD4B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6F0D9D0E-4558-4DB5-AE70-C89166A3BD4B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6F0D9D0E-4558-4DB5-AE70-C89166A3BD4B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6F0D9D0E-4558-4DB5-AE70-C89166A3BD4B}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

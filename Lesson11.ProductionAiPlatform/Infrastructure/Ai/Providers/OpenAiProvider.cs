@@ -10,17 +10,18 @@ public sealed class OpenAiProvider : IAiProvider, IDisposable
 
 	public OpenAiProvider(
 		IOptions<OpenAiOptions> options,
-		IOptions<AiOptions> productionOptions,
+		IOptions<AiOptions> aiOptions,
 		ILoggerFactory loggerFactory)
 	{
 		_options = options.Value;
 
 		var apiKey = Environment.GetEnvironmentVariable("OPENAI_AI_BUSINESS_PLAYGROUND")
-		             ?? throw new InvalidOperationException("OPENAI_AI_BUSINESS_PLAYGROUND environment variable is required.");
+		             ?? throw new InvalidOperationException(
+			             "OPENAI_AI_BUSINESS_PLAYGROUND environment variable is required.");
 
 		IChatClient client = new ChatClient(model: _options.Model, apiKey: apiKey).AsIChatClient();
-		client = new BoundedChatClient(client, productionOptions);
-		
+		client = new BoundedChatClient(client, aiOptions);
+
 		ChatClient = client
 			.AsBuilder()
 			.UseOpenTelemetry(

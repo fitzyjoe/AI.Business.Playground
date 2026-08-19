@@ -9,22 +9,23 @@ public sealed class MessageHandler(
 	IConversationRepository _conversationRepository,
 	PropertyReviewAgent _propertyReviewAgent,
 	AiRequestPolicy _requestPolicy,
-	IOptions<AiOptions> _productionOptions)
+	IOptions<AiOptions> _aiOptions)
 {
 	public async Task<MessageResponse> HandleAsync(MessageRequest messageRequest, CancellationToken cancellationToken)
 	{
 		using var timeoutCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 
-		timeoutCancellation.CancelAfter(TimeSpan.FromSeconds(_productionOptions.Value.AgentRequestTimeoutSeconds));
+		timeoutCancellation.CancelAfter(TimeSpan.FromSeconds(_aiOptions.Value.AgentRequestTimeoutSeconds));
 
 		try
 		{
 			return await HandleCoreAsync(messageRequest, timeoutCancellation.Token);
 		}
-		catch (OperationCanceledException) 
+		catch (OperationCanceledException)
 			when (!cancellationToken.IsCancellationRequested)
 		{
-			throw new AiRequestTimeoutException($"AI request exceeded the {_productionOptions.Value.AgentRequestTimeoutSeconds}-second limit.");
+			throw new AiRequestTimeoutException(
+				$"AI request exceeded the {_aiOptions.Value.AgentRequestTimeoutSeconds}-second limit.");
 		}
 		catch (TimeoutException exception)
 		{
@@ -32,7 +33,9 @@ public sealed class MessageHandler(
 		}
 	}
 
-	private async Task<MessageResponse> HandleCoreAsync(MessageRequest messageRequest, CancellationToken cancellationToken)
+	private async Task<MessageResponse> HandleCoreAsync(
+		MessageRequest messageRequest,
+		CancellationToken cancellationToken)
 	{
 		Conversation conversation;
 		AgentSession session;

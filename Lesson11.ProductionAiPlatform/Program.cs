@@ -37,6 +37,7 @@ builder.Services
 		"An Ollama default model is required.")
 	.ValidateOnStart();
 
+// AI application limits and provider policy
 builder.Services
 	.AddOptions<AiOptions>()
 	.Bind(builder.Configuration.GetSection(AiOptions.SectionName))
@@ -63,7 +64,7 @@ builder.Services
 		"MaxConcurrentCallsPerProvider must be greater than zero.")
 	.ValidateOnStart();
 
-// authentication
+// Demo authentication used only so identity and authorization can be exercised locally.
 builder.Services
 	.AddAuthentication(DemoApiKeyAuthenticationHandler.SchemeName)
 	.AddScheme<AuthenticationSchemeOptions, DemoApiKeyAuthenticationHandler>(
@@ -72,7 +73,6 @@ builder.Services
 		{
 		});
 
-// authorization
 builder.Services
 	.AddAuthorizationBuilder()
 	.AddPolicy(
@@ -122,6 +122,7 @@ builder.Services.AddControllers()
 	});
 
 builder.Services.AddHttpClient();
+builder.Services.AddHttpContextAccessor();
 builder.Services.AddSingleton<IAiProvider, OllamaProvider>();
 builder.Services.AddSingleton<IAiProvider, OpenAiProvider>();
 builder.Services.AddSingleton<IAiProviderFactory, AiProviderFactory>();
@@ -129,7 +130,7 @@ builder.Services.AddTransient<MessageHandler>();
 builder.Services.AddSingleton<IConversationRepository, InMemoryConversationRepository>();
 builder.Services.AddSingleton<PropertyMcpClient>();
 
-// RAG in Ollama
+// RAG embeddings remain local through Ollama.
 builder.Services.AddSingleton<VectorStore>(
 	serviceProvider =>
 	{
@@ -146,9 +147,9 @@ builder.Services.AddSingleton<VectorStore>(
 			.Value;
 
 		httpClient.BaseAddress = new Uri(ollamaOptions.Endpoint);
-		
+
 		IEmbeddingGenerator<string, Embedding<float>> generator = new OllamaApiClient(httpClient);
-		
+
 		var embeddingGenerator = generator
 			.AsBuilder()
 			.ConfigureOptions(options =>
@@ -164,7 +165,7 @@ builder.Services.AddSingleton<VectorStore>(
 			});
 	});
 
-// telemetry
+// GenAI telemetry is exported to the console for the lesson.
 builder.Services
 	.AddOpenTelemetry()
 	.ConfigureResource(
@@ -192,8 +193,8 @@ builder.Services.AddSingleton<KnowledgeTools>();
 builder.Services.AddSingleton<IPendingPropertyReviewRepository, InMemoryPendingPropertyReviewRepository>();
 builder.Services.AddSingleton<IPropertyReviewRepository, InMemoryPropertyReviewRepository>();
 builder.Services.AddSingleton<PropertyReviewService>();
-builder.Services.AddSingleton<PropertyReviewTools>();
-builder.Services.AddSingleton<PropertyReviewAgent>();
+builder.Services.AddTransient<PropertyReviewTools>();
+builder.Services.AddTransient<PropertyReviewAgent>();
 builder.Services.AddSingleton<MonitoringDataSource>();
 builder.Services.AddSingleton<RollingZScoreDetector>();
 builder.Services.AddSingleton<MonitoringTools>();
@@ -204,6 +205,8 @@ builder.Services.AddSingleton<AiRequestPolicy>();
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<ConversationNotFoundExceptionHandler>();
 builder.Services.AddExceptionHandler<UnsupportedAiProviderExceptionHandler>();
+builder.Services.AddExceptionHandler<AiPolicyViolationExceptionHandler>();
+builder.Services.AddExceptionHandler<AiRequestTimeoutExceptionHandler>();
 
 var app = builder.Build();
 

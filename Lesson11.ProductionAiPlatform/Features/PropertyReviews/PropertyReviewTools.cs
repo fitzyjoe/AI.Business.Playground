@@ -1,16 +1,19 @@
 using System.ComponentModel;
-using Lesson11.ProductionAiPlatform.Infrastructure.Ai;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 
 namespace Lesson11.ProductionAiPlatform.Features.PropertyReviews;
 
 public sealed class PropertyReviewTools(
-	PropertyReviewService _service)
+	PropertyReviewService _service,
+	IHttpContextAccessor _httpContextAccessor,
+	IAuthorizationService _authorizationService)
 {
 	[Description(
 		"Creates a pending property review proposal that requires human approval. " +
 		"This does not approve or execute the property review. " +
-		"The current request must have been granted the property-review proposal capability.")]
-	public PropertyReviewProposalToolResult ProposePropertyReview(
+		"The authenticated caller must satisfy the Reviewer authorization policy.")]
+	public async Task<PropertyReviewProposalToolResult> ProposePropertyReviewAsync(
 		[Description("The parcel number for the property.")]
 		string parcelNumber,
 		[Description("The reason a property review is being requested.")]
@@ -18,13 +21,26 @@ public sealed class PropertyReviewTools(
 		[Description("The priority of the review: Low, Normal, or High.")]
 		PropertyReviewPriority priority)
 	{
-		var executionContext = _executionContextAccessor.Current;
+		var user = _httpContextAccessor.HttpContext?.User;
 
-		if (executionContext is null || !executionContext.HasCapability(AiCapabilities.ProposePropertyReview))
+		if (user?.Identity?.IsAuthenticated != true)
 		{
 			return new PropertyReviewProposalToolResult(
 				false,
-				"The current request is not authorized to create a property-review proposal.",
+				"No authenticated caller is associated with this AI request.",
+				null);
+		}
+
+		var authorization = await _authorizationService.AuthorizeAsync(
+			user,
+			resource: null,
+			policyName: "Reviewer");
+
+		if (!authorization.Succeeded)
+		{
+			return new PropertyReviewProposalToolResult(
+				false,
+				"The current caller is not authorized to create property-review proposals.",
 				null);
 		}
 

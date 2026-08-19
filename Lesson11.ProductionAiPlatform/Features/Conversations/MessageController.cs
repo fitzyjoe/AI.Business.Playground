@@ -1,4 +1,3 @@
-using Lesson11.ProductionAiPlatform.Infrastructure.Ai;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -7,8 +6,7 @@ namespace Lesson11.ProductionAiPlatform.Features.Conversations;
 [ApiController]
 [Authorize]
 [Route("api/[controller]")]
-public class MessageController(
-	MessageHandler _messageHandler) : ControllerBase
+public sealed class MessageController(MessageHandler _messageHandler) : ControllerBase
 {
 	[HttpPost]
 	[ProducesResponseType(StatusCodes.Status200OK)]

@@ -1,4 +1,3 @@
-using Lesson11.ProductionAiPlatform.Infrastructure.Ai;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Options;
 using OllamaSharp;
@@ -12,16 +11,17 @@ public sealed class OllamaProvider : IAiProvider, IDisposable
 	public OllamaProvider(
 		IHttpClientFactory httpClientFactory,
 		IOptions<OllamaOptions> options,
-		IOptions<AiOptions> productionOptions,
+		IOptions<AiOptions> aiOptions,
 		ILoggerFactory loggerFactory)
 	{
 		_options = options.Value;
 
 		var httpClient = httpClientFactory.CreateClient();
 		httpClient.BaseAddress = new Uri(_options.Endpoint);
+
 		IChatClient client = new OllamaApiClient(httpClient);
-		client = new BoundedChatClient(client, productionOptions);
-		
+		client = new BoundedChatClient(client, aiOptions);
+
 		ChatClient = client
 			.AsBuilder()
 			.UseOpenTelemetry(

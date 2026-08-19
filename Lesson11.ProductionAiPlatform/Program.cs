@@ -38,8 +38,8 @@ builder.Services
 	.ValidateOnStart();
 
 builder.Services
-	.AddOptions<ProductionAiOptions>()
-	.Bind(builder.Configuration.GetSection(ProductionAiOptions.SectionName))
+	.AddOptions<AiOptions>()
+	.Bind(builder.Configuration.GetSection(AiOptions.SectionName))
 	.Validate(
 		options => options.AllowedProviders.Length > 0,
 		"At least one allowed AI provider is required.")
@@ -200,7 +200,6 @@ builder.Services.AddSingleton<MonitoringTools>();
 builder.Services.AddSingleton<AnomalyAnalysisAgent>();
 builder.Services.AddSingleton<MonitoringService>();
 builder.Services.AddSingleton<AiRequestPolicy>();
-builder.Services.AddSingleton<AiExecutionContextAccessor>();
 
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<ConversationNotFoundExceptionHandler>();

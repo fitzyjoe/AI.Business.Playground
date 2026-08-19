@@ -10,7 +10,7 @@ public sealed class OpenAiProvider : IAiProvider, IDisposable
 
 	public OpenAiProvider(
 		IOptions<OpenAiOptions> options,
-		IOptions<ProductionAiOptions> productionOptions,
+		IOptions<AiOptions> productionOptions,
 		ILoggerFactory loggerFactory)
 	{
 		_options = options.Value;

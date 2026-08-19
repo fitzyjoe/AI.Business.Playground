@@ -1,8 +1,8 @@
 namespace Lesson11.ProductionAiPlatform.Infrastructure.Ai;
 
-public sealed class ProductionAiOptions
+public sealed class AiOptions
 {
-	public const string SectionName = "ProductionAi";
+	public const string SectionName = "AiOptions";
 
 	public string DefaultProvider { get; init; } = "openai";
 

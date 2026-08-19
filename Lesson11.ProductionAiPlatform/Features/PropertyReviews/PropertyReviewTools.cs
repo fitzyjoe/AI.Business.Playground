@@ -4,8 +4,7 @@ using Lesson11.ProductionAiPlatform.Infrastructure.Ai;
 namespace Lesson11.ProductionAiPlatform.Features.PropertyReviews;
 
 public sealed class PropertyReviewTools(
-	PropertyReviewService _service,
-	AiExecutionContextAccessor _executionContextAccessor)
+	PropertyReviewService _service)
 {
 	[Description(
 		"Creates a pending property review proposal that requires human approval. " +

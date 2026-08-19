@@ -6,10 +6,10 @@ namespace Lesson11.ProductionAiPlatform.Infrastructure.Ai;
 
 public sealed class BoundedChatClient : DelegatingChatClient
 {
-    private readonly ProductionAiOptions _options;
+    private readonly AiOptions _options;
     private readonly SemaphoreSlim _concurrencyGate;
 
-    public BoundedChatClient(IChatClient innerClient, IOptions<ProductionAiOptions> options) : base(innerClient)
+    public BoundedChatClient(IChatClient innerClient, IOptions<AiOptions> options) : base(innerClient)
     {
         _options = options.Value;
 
@@ -62,8 +62,7 @@ public sealed class BoundedChatClient : DelegatingChatClient
                                .GetStreamingResponseAsync(
                                    messages,
                                    options,
-                                   timeoutCancellation.Token)
-                               .WithCancellation(timeoutCancellation.Token))
+                                   timeoutCancellation.Token))
             {
                 yield return update;
             }

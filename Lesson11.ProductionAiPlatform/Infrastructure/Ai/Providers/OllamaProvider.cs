@@ -12,7 +12,7 @@ public sealed class OllamaProvider : IAiProvider, IDisposable
 	public OllamaProvider(
 		IHttpClientFactory httpClientFactory,
 		IOptions<OllamaOptions> options,
-		IOptions<ProductionAiOptions> productionOptions,
+		IOptions<AiOptions> productionOptions,
 		ILoggerFactory loggerFactory)
 	{
 		_options = options.Value;

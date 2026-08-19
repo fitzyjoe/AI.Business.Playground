@@ -9,7 +9,7 @@ public sealed class MessageHandler(
 	IConversationRepository _conversationRepository,
 	PropertyReviewAgent _propertyReviewAgent,
 	AiRequestPolicy _requestPolicy,
-	IOptions<ProductionAiOptions> _productionOptions)
+	IOptions<AiOptions> _productionOptions)
 {
 	public async Task<MessageResponse> HandleAsync(MessageRequest messageRequest, CancellationToken cancellationToken)
 	{
@@ -98,5 +98,3 @@ public sealed class MessageHandler(
 		};
 	}
 }
-
-public sealed class AiRequestTimeoutException(string message) : Exception(message);

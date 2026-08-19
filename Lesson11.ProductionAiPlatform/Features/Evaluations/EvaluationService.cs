@@ -7,8 +7,7 @@ namespace Lesson11.ProductionAiPlatform.Features.Evaluations;
 
 public sealed class EvaluationService(
     PropertyReviewAgent _agent,
-    PropertyReviewService _propertyReviewService,
-    AiExecutionContextAccessor _executionContextAccessor)
+    PropertyReviewService _propertyReviewService)
 {
     public async Task<EvaluationRunResult> RunAsync(
         CancellationToken cancellationToken = default)

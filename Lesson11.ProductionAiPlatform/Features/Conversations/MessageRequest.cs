@@ -17,8 +17,6 @@ public sealed class MessageRequest : IValidatableObject
 	[Range(1, int.MaxValue, ErrorMessage = "MaxTokens must be greater than 0.")]
 	public int? MaxTokens { get; init; }
 
-	public bool AllowWriteProposal { get; init; }
-
 	public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
 	{
 		if (!ConversationId.HasValue)

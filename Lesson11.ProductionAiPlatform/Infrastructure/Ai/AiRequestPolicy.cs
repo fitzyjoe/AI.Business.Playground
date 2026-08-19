@@ -3,7 +3,7 @@ using Lesson11.ProductionAiPlatform.Features.Conversations;
 
 namespace Lesson11.ProductionAiPlatform.Infrastructure.Ai;
 
-public sealed class AiRequestPolicy(IOptions<ProductionAiOptions> _options)
+public sealed class AiRequestPolicy(IOptions<AiOptions> _options)
 {
     public ResolvedAiRequestOptions ResolveNewConversation(MessageRequest request)
     {

@@ -8,14 +8,29 @@ public sealed class OpenAiProvider : IAiProvider, IDisposable
 {
 	private readonly OpenAiOptions _options;
 
-	public OpenAiProvider(IOptions<OpenAiOptions> options)
+	public OpenAiProvider(
+		IOptions<OpenAiOptions> options,
+		IOptions<ProductionAiOptions> productionOptions,
+		ILoggerFactory loggerFactory)
 	{
 		_options = options.Value;
 
 		var apiKey = Environment.GetEnvironmentVariable("OPENAI_AI_BUSINESS_PLAYGROUND")
 		             ?? throw new InvalidOperationException("OPENAI_AI_BUSINESS_PLAYGROUND environment variable is required.");
 
-		ChatClient = new ChatClient(model: _options.Model, apiKey: apiKey).AsIChatClient();
+		IChatClient client = new ChatClient(model: _options.Model, apiKey: apiKey).AsIChatClient();
+		client = new BoundedChatClient(client, productionOptions);
+		
+		ChatClient = client
+			.AsBuilder()
+			.UseOpenTelemetry(
+				loggerFactory,
+				AiTelemetry.SourceName,
+				telemetry =>
+				{
+					telemetry.EnableSensitiveData = false;
+				})
+			.Build();
 	}
 
 	public string Name => "openai";

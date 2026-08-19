@@ -1,12 +1,15 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 
 namespace Lesson11.ProductionAiPlatform.Features.PropertyReviews;
 
+[Authorize]
 [ApiController]
 [Route("api/pending-property-reviews")]
 public sealed class PendingPropertyReviewController(PropertyReviewService _service) : ControllerBase
 {
     // TODO: These pending property review requests are not idempotent right now for simplicity even though the approval is idempotent
+    [Authorize(Policy = "Reviewer")]
     [HttpPost]
     public ActionResult<PendingPropertyReview> Create(CreatePendingPropertyReviewRequest request)
     {
@@ -51,6 +54,7 @@ public sealed class PendingPropertyReviewController(PropertyReviewService _servi
         return Ok(pendingPropertyReview);
     }
 
+    [Authorize(Policy = "Reviewer")]
     [HttpPost("{id:guid}/approve")]
     public ActionResult<PropertyReview> Approve(Guid id)
     {
@@ -73,6 +77,7 @@ public sealed class PendingPropertyReviewController(PropertyReviewService _servi
         }
     }
 
+    [Authorize(Policy = "Reviewer")]
     [HttpPost("{id:guid}/reject")]
     public ActionResult<PendingPropertyReview> Reject(Guid id)
     {

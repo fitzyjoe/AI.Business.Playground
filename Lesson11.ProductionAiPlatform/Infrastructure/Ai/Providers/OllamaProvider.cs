@@ -11,14 +11,27 @@ public sealed class OllamaProvider : IAiProvider, IDisposable
 
 	public OllamaProvider(
 		IHttpClientFactory httpClientFactory,
-		IOptions<OllamaOptions> options)
+		IOptions<OllamaOptions> options,
+		IOptions<ProductionAiOptions> productionOptions,
+		ILoggerFactory loggerFactory)
 	{
 		_options = options.Value;
 
 		var httpClient = httpClientFactory.CreateClient();
 		httpClient.BaseAddress = new Uri(_options.Endpoint);
-
-		ChatClient = new OllamaApiClient(httpClient);
+		IChatClient client = new OllamaApiClient(httpClient);
+		client = new BoundedChatClient(client, productionOptions);
+		
+		ChatClient = client
+			.AsBuilder()
+			.UseOpenTelemetry(
+				loggerFactory,
+				AiTelemetry.SourceName,
+				telemetry =>
+				{
+					telemetry.EnableSensitiveData = false;
+				})
+			.Build();
 	}
 
 	public string Name => "ollama";

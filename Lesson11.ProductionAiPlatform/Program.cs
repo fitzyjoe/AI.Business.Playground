@@ -7,13 +7,18 @@ using Lesson11.ProductionAiPlatform.Features.Monitoring;
 using Lesson11.ProductionAiPlatform.Features.PropertyReviews;
 using Lesson11.ProductionAiPlatform.Infrastructure.Ai;
 using Lesson11.ProductionAiPlatform.Infrastructure.Ai.Providers;
+using Lesson11.ProductionAiPlatform.Infrastructure.Authentication;
 using Lesson11.ProductionAiPlatform.Infrastructure.ErrorHandling;
 using Lesson11.ProductionAiPlatform.Infrastructure.Mcp;
 using Lesson11.ProductionAiPlatform.Infrastructure.Rag;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.VectorData;
 using OllamaSharp;
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -31,6 +36,52 @@ builder.Services
 		options => !string.IsNullOrWhiteSpace(options.Model),
 		"An Ollama default model is required.")
 	.ValidateOnStart();
+
+builder.Services
+	.AddOptions<ProductionAiOptions>()
+	.Bind(builder.Configuration.GetSection(ProductionAiOptions.SectionName))
+	.Validate(
+		options => options.AllowedProviders.Length > 0,
+		"At least one allowed AI provider is required.")
+	.Validate(
+		options => options.MaxInputCharacters > 0,
+		"MaxInputCharacters must be greater than zero.")
+	.Validate(
+		options => options.DefaultMaxOutputTokens > 0,
+		"DefaultMaxOutputTokens must be greater than zero.")
+	.Validate(
+		options => options.MaxOutputTokens >= options.DefaultMaxOutputTokens,
+		"MaxOutputTokens must be greater than or equal to DefaultMaxOutputTokens.")
+	.Validate(
+		options => options.AgentRequestTimeoutSeconds > 0,
+		"AgentRequestTimeoutSeconds must be greater than zero.")
+	.Validate(
+		options => options.ProviderCallTimeoutSeconds > 0,
+		"ProviderCallTimeoutSeconds must be greater than zero.")
+	.Validate(
+		options => options.MaxConcurrentCallsPerProvider > 0,
+		"MaxConcurrentCallsPerProvider must be greater than zero.")
+	.ValidateOnStart();
+
+// authentication
+builder.Services
+	.AddAuthentication(DemoApiKeyAuthenticationHandler.SchemeName)
+	.AddScheme<AuthenticationSchemeOptions, DemoApiKeyAuthenticationHandler>(
+		DemoApiKeyAuthenticationHandler.SchemeName,
+		_ =>
+		{
+		});
+
+// authorization
+builder.Services
+	.AddAuthorizationBuilder()
+	.AddPolicy(
+		"Reviewer",
+		policy =>
+		{
+			policy.RequireAuthenticatedUser();
+			policy.RequireRole("Reviewer");
+		});
 
 // OpenAI
 builder.Services
@@ -113,6 +164,29 @@ builder.Services.AddSingleton<VectorStore>(
 			});
 	});
 
+// telemetry
+builder.Services
+	.AddOpenTelemetry()
+	.ConfigureResource(
+		resource =>
+		{
+			resource.AddService(builder.Environment.ApplicationName);
+		})
+	.WithTracing(
+		tracing =>
+		{
+			tracing
+				.AddSource(AiTelemetry.SourceName)
+				.AddConsoleExporter();
+		})
+	.WithMetrics(
+		metrics =>
+		{
+			metrics
+				.AddMeter(AiTelemetry.SourceName)
+				.AddConsoleExporter();
+		});
+
 builder.Services.AddSingleton<KnowledgeRetriever>();
 builder.Services.AddSingleton<KnowledgeTools>();
 builder.Services.AddSingleton<IPendingPropertyReviewRepository, InMemoryPendingPropertyReviewRepository>();
@@ -125,6 +199,8 @@ builder.Services.AddSingleton<RollingZScoreDetector>();
 builder.Services.AddSingleton<MonitoringTools>();
 builder.Services.AddSingleton<AnomalyAnalysisAgent>();
 builder.Services.AddSingleton<MonitoringService>();
+builder.Services.AddSingleton<AiRequestPolicy>();
+builder.Services.AddSingleton<AiExecutionContextAccessor>();
 
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<ConversationNotFoundExceptionHandler>();
@@ -141,6 +217,8 @@ await app.Services
 	.InitializeAsync();
 
 app.UseExceptionHandler();
+app.UseAuthentication();
+app.UseAuthorization();
 app.MapControllers();
 
 app.Run();

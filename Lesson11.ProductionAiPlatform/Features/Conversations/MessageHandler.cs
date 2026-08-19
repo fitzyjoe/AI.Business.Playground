@@ -1,15 +1,38 @@
 using Lesson11.ProductionAiPlatform.Features.Agents;
+using Lesson11.ProductionAiPlatform.Infrastructure.Ai;
 using Microsoft.Agents.AI;
+using Microsoft.Extensions.Options;
 
 namespace Lesson11.ProductionAiPlatform.Features.Conversations;
 
 public sealed class MessageHandler(
 	IConversationRepository _conversationRepository,
-	PropertyReviewAgent _propertyReviewAgent)
+	PropertyReviewAgent _propertyReviewAgent,
+	AiRequestPolicy _requestPolicy,
+	IOptions<ProductionAiOptions> _productionOptions)
 {
-	public async Task<MessageResponse> HandleAsync(
-		MessageRequest messageRequest,
-		CancellationToken cancellationToken)
+	public async Task<MessageResponse> HandleAsync(MessageRequest messageRequest, CancellationToken cancellationToken)
+	{
+		using var timeoutCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+
+		timeoutCancellation.CancelAfter(TimeSpan.FromSeconds(_productionOptions.Value.AgentRequestTimeoutSeconds));
+
+		try
+		{
+			return await HandleCoreAsync(messageRequest, timeoutCancellation.Token);
+		}
+		catch (OperationCanceledException) 
+			when (!cancellationToken.IsCancellationRequested)
+		{
+			throw new AiRequestTimeoutException($"AI request exceeded the {_productionOptions.Value.AgentRequestTimeoutSeconds}-second limit.");
+		}
+		catch (TimeoutException exception)
+		{
+			throw new AiRequestTimeoutException(exception.Message);
+		}
+	}
+
+	private async Task<MessageResponse> HandleCoreAsync(MessageRequest messageRequest, CancellationToken cancellationToken)
 	{
 		Conversation conversation;
 		AgentSession session;
@@ -21,6 +44,8 @@ public sealed class MessageHandler(
 				cancellationToken)
 			?? throw new ConversationNotFoundException(
 				messageRequest.ConversationId.Value);
+
+			_requestPolicy.ValidateExistingConversation(messageRequest, conversation);
 
 			if (!conversation.AgentSessionState.HasValue)
 			{
@@ -36,9 +61,7 @@ public sealed class MessageHandler(
 		else
 		{
 			conversation = CreateConversation(messageRequest);
-			session = await _propertyReviewAgent.CreateSessionAsync(
-				conversation,
-				cancellationToken);
+			session = await _propertyReviewAgent.CreateSessionAsync(conversation, cancellationToken);
 		}
 
 		var agentResponse = await _propertyReviewAgent.RunAsync(
@@ -51,11 +74,10 @@ public sealed class MessageHandler(
 			conversation,
 			session,
 			cancellationToken);
+
 		conversation.UpdatedAt = DateTimeOffset.UtcNow;
 
-		await _conversationRepository.SaveAsync(
-			conversation,
-			cancellationToken);
+		await _conversationRepository.SaveAsync(conversation, cancellationToken);
 
 		return new MessageResponse(
 			conversation.Id,
@@ -64,15 +86,17 @@ public sealed class MessageHandler(
 			agentResponse.Duration);
 	}
 
-	private static Conversation CreateConversation(MessageRequest request)
+	private Conversation CreateConversation(MessageRequest request)
 	{
+		var resolved = _requestPolicy.ResolveNewConversation(request);
+
 		return new Conversation
 		{
-			SystemPrompt = request.SystemPrompt,
-			Provider = request.Provider ?? "ollama",
-			Model = request.Model,
-			Temperature = request.Temperature,
-			MaxTokens = request.MaxTokens
+			Provider = resolved.Provider,
+			Temperature = resolved.Temperature,
+			MaxTokens = resolved.MaxOutputTokens
 		};
 	}
 }
+
+public sealed class AiRequestTimeoutException(string message) : Exception(message);

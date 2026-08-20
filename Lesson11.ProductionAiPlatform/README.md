@@ -25,7 +25,9 @@ By the end of Lesson11, you should understand:
 - why a stable identity such as `ClaimTypes.NameIdentifier` is a better ownership key than a display name;
 - how a scoped `ICurrentUser` can expose request identity without passing user IDs through public request DTOs;
 - why a fallback authorization policy is safer than remembering `[Authorize]` on every new controller;
-- how to constrain conversation provider selection, temperature, input size, and output tokens with application policy;
+- how application policy constrains which AI providers can be used;
+- why providers should be created only when they are actually needed;
+- how to constrain conversation temperature, input size, and output tokens with application policy;
 - how to place provider-neutral timeouts, concurrency limits, and output-token caps below the agent layer;
 - why a whole-agent timeout is different from a single provider operation timeout;
 - how prompt injection can arrive through retrieved RAG content rather than directly from the user;
@@ -91,6 +93,8 @@ MessageHandler
 PropertyReviewAgent
         ↓
 IAiProviderFactory
+    ├── global provider allowlist
+    └── keyed lazy provider resolution
         ↓
 IAiProvider
         ↓
@@ -144,7 +148,7 @@ AI_DEMO_REVIEWER_KEY
     → Reader + Reviewer roles
 ```
 
-The distinction between `NameIdentifier` and `Name` is intentional.
+The distinction between `NameIdentifier` and `Name` is intentional:
 
 ```text
 NameIdentifier
@@ -266,11 +270,13 @@ OwnerId
 
 The application owns the agent instructions, each provider owns its configured default model, and authentication establishes the conversation owner.
 
+Provider, temperature, and output-token settings are resolved when a conversation is created and are then stored with that conversation. Continuing a conversation does not allow the caller to replace those settings. The provider is still checked against the current application allowlist before an existing conversation can run.
+
 ---
 
 ## AiOptions and AI Request Policy
 
-`Infrastructure/Ai/AiOptions.cs` defines the limits used by the conversation policy and bounded provider clients:
+`Infrastructure/Ai/AiOptions.cs` defines application-wide provider policy plus limits used by the conversation policy and bounded provider clients:
 
 ```json
 "AiOptions": {
@@ -289,10 +295,19 @@ The application owns the agent instructions, each provider owns its configured d
 }
 ```
 
+Startup validation catches invalid application configuration such as:
+
+```text
+no allowed providers
+DefaultProvider missing from AllowedProviders
+non-positive input/token/timeout/concurrency limits
+negative MaxTemperature
+```
+
 `AiRequestPolicy` validates and normalizes conversation requests before a model is called. It controls:
 
 ```text
-conversation provider allowlist
+conversation provider selection
 input character limit
 maximum temperature
 default output-token count
@@ -320,7 +335,44 @@ resolved         1,200
 
 `BoundedChatClient` applies the output-token hard limit again immediately before the provider operation. The duplicate boundary is intentional: higher-level request policy and lower-level provider protection serve different purposes.
 
-`Monitoring.Provider` is configured separately and does not pass through `AiRequestPolicy`; it resolves its provider directly through `IAiProviderFactory`.
+---
+
+## Global Provider Allowlist and Lazy Provider Construction
+
+`AiProviderFactory` is the application-wide provider boundary.
+
+It first verifies that the requested provider appears in `AiOptions.AllowedProviders`, then resolves the matching keyed service:
+
+```text
+GetProvider("openai")
+        ↓
+AllowedProviders contains openai?
+        ↓
+resolve keyed OpenAiProvider
+```
+
+The providers are registered as keyed singletons:
+
+```csharp
+builder.Services.AddKeyedSingleton<IAiProvider, OllamaProvider>("ollama");
+builder.Services.AddKeyedSingleton<IAiProvider, OpenAiProvider>("openai");
+```
+
+This is intentionally different from injecting `IEnumerable<IAiProvider>` into the factory. Resolving an enumerable would instantiate every provider when the factory was constructed.
+
+With keyed resolution:
+
+```text
+OpenAI selected
+    → OpenAiProvider is created on first use
+    → OllamaProvider is not created merely because it is registered
+```
+
+The same factory is used by the property-review and monitoring agents, so `AllowedProviders` is a global application policy rather than only an HTTP request rule.
+
+For example, if `Monitoring.Provider` is configured as `openai` but `openai` is removed from `AllowedProviders`, the monitoring agent cannot bypass the application provider policy.
+
+Lazy chat-provider construction does **not** currently remove Lesson11's Ollama runtime requirement because RAG embeddings are still generated locally through Ollama during knowledge-base initialization.
 
 ---
 
@@ -346,11 +398,13 @@ The client clamps `ChatOptions.MaxOutputTokens` to the configured maximum.
 
 ### Provider-operation timeout
 
-A linked cancellation token bounds provider work. In the current implementation the timeout starts before the concurrency gate is acquired, so time spent waiting for a provider slot is part of that budget.
+A linked cancellation token bounds provider work. The timeout starts before the concurrency gate is acquired, so time spent waiting for a provider slot is part of that budget.
 
 ### Concurrency limit
 
-A `SemaphoreSlim` limits simultaneous calls through a provider instance. This demonstrates a simple bulkhead around a bounded external resource.
+A `SemaphoreSlim` limits simultaneous calls through a provider instance. The implementation tracks whether the gate was actually acquired and releases it only after a successful acquisition.
+
+This demonstrates a simple bulkhead around a bounded external resource.
 
 ---
 
@@ -388,9 +442,33 @@ AgentRequestTimeoutSeconds
     → bounds the complete property-review agent workflow
 ```
 
-A provider timeout is translated into the application-level `AiRequestTimeoutException`, and the global exception handler returns HTTP 504.
+A non-streaming provider timeout is translated into the application-level `AiRequestTimeoutException`, and the global exception handler returns HTTP 504.
 
 The inherited monitoring workflow uses the bounded provider client but currently does not add a separate whole-agent timeout of its own.
+
+---
+
+## RAG Embeddings
+
+The chat provider and the embedding provider are separate concerns.
+
+Lesson11 currently keeps the Lesson10 RAG design:
+
+```text
+Knowledge/*.md
+      ↓
+KnowledgeRetriever.InitializeAsync()
+      ↓
+Ollama embeddinggemma
+      ↓
+InMemoryVectorStore
+```
+
+`Rag.EmbeddingModel`, `Rag.EmbeddingDimensions`, and `Rag.TopResults` configure that path. The vector collection uses the configured embedding dimensions when it is created.
+
+Because the knowledge base is indexed during startup, Ollama must currently be running even when OpenAI is selected as the chat provider.
+
+This is a deliberate inherited simplification, not a requirement of `Microsoft.Extensions.AI`; the embedding API is already represented by `IEmbeddingGenerator<string, Embedding<float>>`, so another embedding implementation could be substituted later without changing `KnowledgeRetriever`.
 
 ---
 
@@ -568,7 +646,7 @@ Lesson11.ProductionAiPlatform.Tests
 
 ### Deterministic tests
 
-Normal software behavior is tested with ordinary assertions:
+Normal software behavior is tested with ordinary assertions, including:
 
 ```text
 conversation ownership isolation
@@ -630,17 +708,24 @@ Lesson11.ProductionAiPlatform/
 ├── Infrastructure/
 │   ├── Ai/
 │   │   ├── AiOptions.cs
+│   │   ├── AiProviderFactory.cs
 │   │   ├── AiRequestPolicy.cs
 │   │   ├── AiRequestTimeoutException.cs
 │   │   ├── AiTelemetry.cs
-│   │   └── BoundedChatClient.cs
+│   │   ├── BoundedChatClient.cs
+│   │   └── Providers/
+│   │       ├── OllamaProvider.cs
+│   │       └── OpenAiProvider.cs
 │   ├── Authentication/
 │   │   ├── CurrentUser.cs
 │   │   ├── DemoApiKeyAuthenticationHandler.cs
 │   │   └── ICurrentUser.cs
-│   └── ErrorHandling/
-│       ├── AiPolicyViolationExceptionHandler.cs
-│       └── AiRequestTimeoutExceptionHandler.cs
+│   ├── ErrorHandling/
+│   │   ├── AiPolicyViolationExceptionHandler.cs
+│   │   └── AiRequestTimeoutExceptionHandler.cs
+│   └── Rag/
+│       ├── KnowledgeRetriever.cs
+│       └── RagOptions.cs
 ├── Knowledge/
 │   └── external-vendor-hearing-note.md
 ├── Program.cs
@@ -648,8 +733,9 @@ Lesson11.ProductionAiPlatform/
 
 Lesson11.ProductionAiPlatform.Tests/
 ├── Features/
+│   ├── Conversations/
+│   │   └── ConversationTests.cs
 │   └── PropertyReviews/
-│       ├── ConversationTests.cs
 │       ├── PropertyReviewServiceTests.cs
 │       └── PropertyReviewToolsAuthorizationTests.cs
 ├── Infrastructure/
@@ -664,6 +750,8 @@ Lesson11.ProductionAiPlatform.Tests/
 ## Running the Lesson
 
 ### 1. Configure OpenAI
+
+OpenAI is required only if an allowed workflow actually resolves `OpenAiProvider`:
 
 ```bash
 export OPENAI_AI_BUSINESS_PLAYGROUND="your-api-key"
@@ -697,7 +785,9 @@ dotnet run --project Lesson11.ProductionAiPlatform
 
 ---
 
-## Exercise 1 — Authentication and Secure Defaults
+## Exercises
+
+### 1. Authentication and secure defaults
 
 Call the AI endpoint without credentials:
 
@@ -711,17 +801,11 @@ curl -i \
   }'
 ```
 
-Expected:
+Expected: `HTTP 401`.
 
-```text
-HTTP 401
-```
+The fallback authentication requirement also applies to other controller endpoints such as `/api/monitoring/scan`.
 
-The same fallback authentication requirement also applies to other controller endpoints such as `/api/monitoring/scan`.
-
----
-
-## Exercise 2 — Provider Allowlist
+### 2. Provider allowlist
 
 ```bash
 curl -i \
@@ -735,11 +819,9 @@ curl -i \
   }'
 ```
 
-Expected: HTTP 400 with an AI request policy violation.
+Expected: `HTTP 400` with an AI request policy violation.
 
----
-
-## Exercise 3 — Temperature Policy
+### 3. Temperature policy
 
 ```bash
 curl -i \
@@ -753,11 +835,9 @@ curl -i \
   }'
 ```
 
-Expected: HTTP 400 because the DTO's broad valid range is still subject to the application's lower configured maximum.
+Expected: `HTTP 400` because the DTO's broad valid range is still subject to the application's configured maximum for new conversations.
 
----
-
-## Exercise 4 — Output-Token Hard Limit
+### 4. Output-token hard limit
 
 ```bash
 curl -s \
@@ -774,9 +854,7 @@ curl -s \
 
 The request succeeds, but `AiRequestPolicy` clamps the requested output to the configured maximum. `BoundedChatClient` enforces the maximum again immediately before provider execution.
 
----
-
-## Exercise 5 — Reader Cannot Create an AI Proposal
+### 5. Reader cannot create an AI proposal
 
 Record the current number of pending proposals:
 
@@ -803,7 +881,7 @@ curl -s \
   | jq .
 ```
 
-Check again and verify the count did not change.
+Check again:
 
 ```bash
 AFTER=$(
@@ -816,15 +894,9 @@ AFTER=$(
 printf 'Before: %s\nAfter:  %s\n' "$BEFORE" "$AFTER"
 ```
 
-Expected:
+Expected: `AFTER == BEFORE`.
 
-```text
-AFTER == BEFORE
-```
-
----
-
-## Exercise 6 — Reviewer Can Create a Pending Proposal
+### 6. Reviewer can create a pending proposal
 
 ```bash
 curl -s \
@@ -849,9 +921,7 @@ curl -s \
 
 A new pending proposal should exist. It is still not an executed `PropertyReview`.
 
----
-
-## Exercise 7 — Approval Authorization
+### 7. Approval authorization
 
 Capture a pending ID and try to approve it as Reader:
 
@@ -869,11 +939,7 @@ curl -i \
   -H "X-Api-Key: reader-secret"
 ```
 
-Expected:
-
-```text
-HTTP 403
-```
+Expected: `HTTP 403`.
 
 Approve as Reviewer:
 
@@ -887,11 +953,7 @@ curl -s \
 
 The application creates the `PropertyReview` only after this separate authorized approval.
 
----
-
-## Exercise 8 — Prompt Injection Against a Reader
-
-Record the pending count, ask an innocent question about the hostile document, and check the count again:
+### 8. Prompt injection against a Reader
 
 ```bash
 BEFORE=$(
@@ -923,9 +985,7 @@ printf 'Before: %s\nAfter:  %s\n' "$BEFORE" "$AFTER"
 
 The response should identify `external-vendor-hearing-note.md`, and the pending count should remain unchanged.
 
----
-
-## Exercise 9 — Prompt Injection Against a Reviewer
+### 9. Prompt injection against a Reviewer
 
 Repeat the experiment using the Reviewer identity:
 
@@ -957,17 +1017,11 @@ AFTER=$(
 printf 'Before: %s\nAfter:  %s\n' "$BEFORE" "$AFTER"
 ```
 
-Desired result:
-
-```text
-AFTER == BEFORE
-```
+Desired result: `AFTER == BEFORE`.
 
 This case tests model behavior rather than privilege escalation because the Reviewer is actually authorized to create a pending proposal.
 
----
-
-## Exercise 10 — Observe Telemetry
+### 10. Observe telemetry
 
 Make an ordinary authenticated request and watch the application console for OpenTelemetry output:
 
@@ -1014,13 +1068,7 @@ dotnet test Lesson11.ProductionAiPlatform.Tests/Lesson11.ProductionAiPlatform.Te
   --filter "Category=AiEvaluation"
 ```
 
-The tests use:
-
-```text
-http://localhost:5000/
-```
-
-by default. To use another address:
+The tests use `http://localhost:5000/` by default. To use another address:
 
 ```bash
 export LESSON11_BASE_URL="http://localhost:5100/"
@@ -1043,6 +1091,14 @@ A caller can continue only conversations owned by that authenticated identity.
 ### Authorization is secure by default
 
 The fallback policy requires authentication for controller endpoints unless an endpoint is deliberately made anonymous.
+
+### Provider policy is application-wide
+
+All chat-provider resolution goes through `AiProviderFactory`, which enforces `AllowedProviders`. A background or monitoring workflow does not bypass the allowlist just because it did not originate from `MessageRequest`.
+
+### Registered providers are not automatically instantiated
+
+Keyed DI allows the application to construct only the provider that a workflow actually requests.
 
 ### Tool choice is not authorization
 
@@ -1098,6 +1154,8 @@ ownership
     ↓
 authorization
     ↓
+AI provider policy
+    ↓
 AI request policy
     ↓
 bounded AI execution
@@ -1130,9 +1188,10 @@ Lesson11 is complete when:
 ✓ the AI proposal tool independently enforces Reviewer authorization
 ✓ caller-supplied system prompts are no longer accepted
 ✓ caller-supplied arbitrary model selection is no longer accepted
-✓ conversation provider selection is allowlisted
+✓ allowed AI providers are enforced at the provider factory
+✓ providers are instantiated only when resolved
 ✓ message input length is bounded
-✓ temperature is bounded by conversation policy
+✓ temperature is bounded when a conversation is created
 ✓ output tokens are capped at the provider boundary
 ✓ provider operations have a timeout
 ✓ provider calls have a concurrency limit
@@ -1160,7 +1219,8 @@ The application remains responsible for:
 identity
 ownership
 authorization
-AI policy
+provider policy
+AI request policy
 resource limits
 timeouts
 business invariants

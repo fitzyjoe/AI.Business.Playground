@@ -25,22 +25,23 @@ public sealed class DemoApiKeyAuthenticationHandler(
 
         if (!string.IsNullOrWhiteSpace(readerKey) && string.Equals(suppliedKey, readerKey, StringComparison.Ordinal))
         {
-            return Task.FromResult(CreateSuccess("reader@example.com", ["Reader"]));
+            return Task.FromResult(CreateSuccess("reader-user", "reader@example.com", ["Reader"]));
         }
 
         if (!string.IsNullOrWhiteSpace(reviewerKey) && string.Equals(suppliedKey, reviewerKey, StringComparison.Ordinal))
         {
-            return Task.FromResult(CreateSuccess("reviewer@example.com", ["Reader", "Reviewer"]));
+            return Task.FromResult(CreateSuccess("reviewer-user", "reviewer@example.com", ["Reader", "Reviewer"]));
         }
 
         return Task.FromResult(AuthenticateResult.Fail("Invalid API key."));
     }
 
-    private AuthenticateResult CreateSuccess(string name, IReadOnlyCollection<string> roles)
+    private AuthenticateResult CreateSuccess(string userId, string name, IReadOnlyCollection<string> roles)
     {
         var claims = new List<Claim>
         {
-            new(ClaimTypes.Name, name)
+            new(ClaimTypes.Name, name),
+            new(ClaimTypes.NameIdentifier, userId)
         };
 
         claims.AddRange(roles.Select(role => new Claim(ClaimTypes.Role, role)));

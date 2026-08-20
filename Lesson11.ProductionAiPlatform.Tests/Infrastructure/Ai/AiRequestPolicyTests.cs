@@ -91,6 +91,7 @@ public sealed class AiRequestPolicyTests
 		};
 		var conversation = new Conversation
 		{
+			OwnerId = "reader-user",
 			Provider = "ollama"
 		};
 

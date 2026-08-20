@@ -4,6 +4,7 @@ public interface IConversationRepository
 {
 	Task<Conversation?> GetAsync(
 		Guid conversationId,
+		string ownerId,
 		CancellationToken cancellationToken = default);
 	
 	Task SaveAsync(

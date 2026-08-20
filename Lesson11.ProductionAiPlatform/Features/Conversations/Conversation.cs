@@ -6,6 +6,8 @@ public class Conversation
 {
 	public Guid Id { get; init; } = Guid.NewGuid();
 
+	public required string OwnerId { get; init; }
+
 	public string Provider { get; init; } = "openai";
 
 	public float? Temperature { get; init; }

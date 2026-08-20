@@ -1,5 +1,6 @@
 using Lesson11.ProductionAiPlatform.Features.Agents;
 using Lesson11.ProductionAiPlatform.Infrastructure.Ai;
+using Lesson11.ProductionAiPlatform.Infrastructure.Authentication;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.Options;
 
@@ -9,6 +10,7 @@ public sealed class MessageHandler(
 	IConversationRepository _conversationRepository,
 	PropertyReviewAgent _propertyReviewAgent,
 	AiRequestPolicy _requestPolicy,
+	ICurrentUser _currentUser,
 	IOptions<AiOptions> _aiOptions)
 {
 	public async Task<MessageResponse> HandleAsync(MessageRequest messageRequest, CancellationToken cancellationToken)
@@ -44,6 +46,7 @@ public sealed class MessageHandler(
 		{
 			conversation = await _conversationRepository.GetAsync(
 				messageRequest.ConversationId.Value,
+				_currentUser.Id,
 				cancellationToken)
 			?? throw new ConversationNotFoundException(
 				messageRequest.ConversationId.Value);
@@ -95,6 +98,7 @@ public sealed class MessageHandler(
 
 		return new Conversation
 		{
+			OwnerId = _currentUser.Id,
 			Provider = resolved.Provider,
 			Temperature = resolved.Temperature,
 			MaxTokens = resolved.MaxOutputTokens

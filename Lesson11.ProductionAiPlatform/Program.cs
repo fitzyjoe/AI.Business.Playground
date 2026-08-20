@@ -12,6 +12,7 @@ using Lesson11.ProductionAiPlatform.Infrastructure.ErrorHandling;
 using Lesson11.ProductionAiPlatform.Infrastructure.Mcp;
 using Lesson11.ProductionAiPlatform.Infrastructure.Rag;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.VectorData;
@@ -73,15 +74,16 @@ builder.Services
 		{
 		});
 
+var requireAuthenticatedUser = new AuthorizationPolicyBuilder()
+	.RequireAuthenticatedUser()
+	.Build();
+
 builder.Services
 	.AddAuthorizationBuilder()
+	.SetFallbackPolicy(requireAuthenticatedUser)
 	.AddPolicy(
 		"Reviewer",
-		policy =>
-		{
-			policy.RequireAuthenticatedUser();
-			policy.RequireRole("Reviewer");
-		});
+		policy => policy.RequireRole("Reviewer"));
 
 // OpenAI
 builder.Services
@@ -123,6 +125,7 @@ builder.Services.AddControllers()
 
 builder.Services.AddHttpClient();
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<ICurrentUser, CurrentUser>();
 builder.Services.AddSingleton<IAiProvider, OllamaProvider>();
 builder.Services.AddSingleton<IAiProvider, OpenAiProvider>();
 builder.Services.AddSingleton<IAiProviderFactory, AiProviderFactory>();

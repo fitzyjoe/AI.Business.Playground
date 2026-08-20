@@ -63,6 +63,12 @@ builder.Services
 	.Validate(
 		options => options.MaxConcurrentCallsPerProvider > 0,
 		"MaxConcurrentCallsPerProvider must be greater than zero.")
+	.Validate(
+		options => options.AllowedProviders.Contains(options.DefaultProvider, StringComparer.OrdinalIgnoreCase),
+		"DefaultProvider must appear in AllowedProviders.")
+	.Validate(
+		options => options.MaxTemperature >= 0,
+		"MaxTemperature cannot be negative.")
 	.ValidateOnStart();
 
 // Demo authentication used only so identity and authorization can be exercised locally.
@@ -126,8 +132,8 @@ builder.Services.AddControllers()
 builder.Services.AddHttpClient();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUser, CurrentUser>();
-builder.Services.AddSingleton<IAiProvider, OllamaProvider>();
-builder.Services.AddSingleton<IAiProvider, OpenAiProvider>();
+builder.Services.AddKeyedSingleton<IAiProvider, OllamaProvider>("ollama");
+builder.Services.AddKeyedSingleton<IAiProvider, OpenAiProvider>("openai");
 builder.Services.AddSingleton<IAiProviderFactory, AiProviderFactory>();
 builder.Services.AddTransient<MessageHandler>();
 builder.Services.AddSingleton<IConversationRepository, InMemoryConversationRepository>();

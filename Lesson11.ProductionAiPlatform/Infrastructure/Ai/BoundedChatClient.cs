@@ -29,9 +29,12 @@ public sealed class BoundedChatClient : DelegatingChatClient
 
         timeoutCancellation.CancelAfter(TimeSpan.FromSeconds(_options.ProviderCallTimeoutSeconds));
 
+        var acquired = false;
+        
         try
         {
             await _concurrencyGate.WaitAsync(timeoutCancellation.Token);
+            acquired = true;
             return await base.GetResponseAsync(messages, options, timeoutCancellation.Token);
         }
         catch (OperationCanceledException)
@@ -41,7 +44,10 @@ public sealed class BoundedChatClient : DelegatingChatClient
         }
         finally
         {
-            _concurrencyGate.Release();
+            if (acquired)
+            {
+                _concurrencyGate.Release();
+            }
         }
     }
 
@@ -54,9 +60,12 @@ public sealed class BoundedChatClient : DelegatingChatClient
         using var timeoutCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         timeoutCancellation.CancelAfter(TimeSpan.FromSeconds(_options.ProviderCallTimeoutSeconds));
 
+        var acquired = false;
+        
         try
         {
             await _concurrencyGate.WaitAsync(timeoutCancellation.Token);
+            acquired = true;
             await foreach (var update in base
                                .GetStreamingResponseAsync(
                                    messages,
@@ -68,7 +77,10 @@ public sealed class BoundedChatClient : DelegatingChatClient
         }
         finally
         {
-            _concurrencyGate.Release();
+            if (acquired)
+            {
+                _concurrencyGate.Release();
+            }
         }
     }
 

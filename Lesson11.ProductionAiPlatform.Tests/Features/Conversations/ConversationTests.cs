@@ -1,6 +1,6 @@
 using Lesson11.ProductionAiPlatform.Features.Conversations;
 
-namespace Lesson11.ProductionAiPlatform.Tests.Features.PropertyReviews;
+namespace Lesson11.ProductionAiPlatform.Tests.Features.Conversations;
 
 public sealed class ConversationTests
 {

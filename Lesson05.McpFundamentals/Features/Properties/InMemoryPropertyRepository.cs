@@ -1,6 +1,4 @@
-using Lesson05.McpFundamentals.Features.Properties;
-
-namespace Lesson05.McpFundamentals.Infrastructure.Properties;
+namespace Lesson05.McpFundamentals.Features.Properties;
 
 public sealed class InMemoryPropertyRepository : IPropertyRepository
 {

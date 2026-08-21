@@ -1,4 +1,3 @@
-using Lesson08.SafeWriteOperations.Infrastructure.Rag;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Lesson08.SafeWriteOperations.Features.Knowledge;

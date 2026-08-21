@@ -1,4 +1,4 @@
-namespace Lesson10.MonitoringAndAnomalyDetection.Infrastructure.Rag;
+namespace Lesson08.SafeWriteOperations.Features.Knowledge;
 
 public sealed record KnowledgeSearchResult(
 	string Source,

@@ -1,4 +1,3 @@
-using Lesson07.RetrievalAugmentedGeneration.Infrastructure.Rag;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Lesson07.RetrievalAugmentedGeneration.Features.Knowledge;

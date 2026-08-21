@@ -1,10 +1,10 @@
 ﻿using CommunityToolkit.VectorData.InMemory;
 using Lesson07.RetrievalAugmentedGeneration.Features.Conversations;
+using Lesson07.RetrievalAugmentedGeneration.Features.Knowledge;
 using Lesson07.RetrievalAugmentedGeneration.Infrastructure.Ai;
 using Lesson07.RetrievalAugmentedGeneration.Infrastructure.Ai.Providers;
 using Lesson07.RetrievalAugmentedGeneration.Infrastructure.ErrorHandling;
 using Lesson07.RetrievalAugmentedGeneration.Infrastructure.Mcp;
-using Lesson07.RetrievalAugmentedGeneration.Infrastructure.Rag;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.VectorData;

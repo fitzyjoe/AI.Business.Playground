@@ -1,5 +1,4 @@
 using System.ComponentModel;
-using Lesson10.MonitoringAndAnomalyDetection.Infrastructure.Rag;
 
 namespace Lesson10.MonitoringAndAnomalyDetection.Features.Knowledge;
 

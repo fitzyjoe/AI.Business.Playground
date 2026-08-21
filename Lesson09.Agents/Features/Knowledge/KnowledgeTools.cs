@@ -1,5 +1,4 @@
 using System.ComponentModel;
-using Lesson09.Agents.Infrastructure.Rag;
 
 namespace Lesson09.Agents.Features.Knowledge;
 

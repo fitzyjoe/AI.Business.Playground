@@ -2,7 +2,7 @@ using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.VectorData;
 
-namespace Lesson09.Agents.Infrastructure.Rag;
+namespace Lesson08.SafeWriteOperations.Features.Knowledge;
 
 public sealed class KnowledgeRetriever(
     VectorStore _vectorStore,

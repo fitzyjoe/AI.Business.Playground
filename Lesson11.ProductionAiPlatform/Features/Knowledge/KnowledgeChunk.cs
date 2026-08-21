@@ -1,6 +1,6 @@
 using Microsoft.Extensions.VectorData;
 
-namespace Lesson07.RetrievalAugmentedGeneration.Infrastructure.Rag;
+namespace Lesson11.ProductionAiPlatform.Features.Knowledge;
 
 public sealed class KnowledgeChunk
 {

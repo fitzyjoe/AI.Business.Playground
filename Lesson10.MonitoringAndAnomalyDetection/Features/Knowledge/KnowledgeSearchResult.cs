@@ -1,4 +1,4 @@
-namespace Lesson11.ProductionAiPlatform.Infrastructure.Rag;
+namespace Lesson10.MonitoringAndAnomalyDetection.Features.Knowledge;
 
 public sealed record KnowledgeSearchResult(
 	string Source,

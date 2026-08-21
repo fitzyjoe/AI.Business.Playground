@@ -1,12 +1,12 @@
 ﻿using System.Text.Json.Serialization;
 using CommunityToolkit.VectorData.InMemory;
 using Lesson08.SafeWriteOperations.Features.Conversations;
+using Lesson08.SafeWriteOperations.Features.Knowledge;
 using Lesson08.SafeWriteOperations.Features.PropertyReviews;
 using Lesson08.SafeWriteOperations.Infrastructure.Ai;
 using Lesson08.SafeWriteOperations.Infrastructure.Ai.Providers;
 using Lesson08.SafeWriteOperations.Infrastructure.ErrorHandling;
 using Lesson08.SafeWriteOperations.Infrastructure.Mcp;
-using Lesson08.SafeWriteOperations.Infrastructure.Rag;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.VectorData;

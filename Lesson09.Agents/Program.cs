@@ -8,7 +8,6 @@ using Lesson09.Agents.Infrastructure.Ai;
 using Lesson09.Agents.Infrastructure.Ai.Providers;
 using Lesson09.Agents.Infrastructure.ErrorHandling;
 using Lesson09.Agents.Infrastructure.Mcp;
-using Lesson09.Agents.Infrastructure.Rag;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.VectorData;

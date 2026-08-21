@@ -9,7 +9,6 @@ using Lesson10.MonitoringAndAnomalyDetection.Infrastructure.Ai;
 using Lesson10.MonitoringAndAnomalyDetection.Infrastructure.Ai.Providers;
 using Lesson10.MonitoringAndAnomalyDetection.Infrastructure.ErrorHandling;
 using Lesson10.MonitoringAndAnomalyDetection.Infrastructure.Mcp;
-using Lesson10.MonitoringAndAnomalyDetection.Infrastructure.Rag;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.VectorData;

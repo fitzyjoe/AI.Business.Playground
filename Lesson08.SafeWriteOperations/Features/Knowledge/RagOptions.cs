@@ -1,4 +1,4 @@
-namespace Lesson07.RetrievalAugmentedGeneration.Infrastructure.Rag;
+namespace Lesson08.SafeWriteOperations.Features.Knowledge;
 
 public sealed class RagOptions
 {

@@ -1,6 +1,6 @@
 using Microsoft.Extensions.VectorData;
 
-namespace Lesson10.MonitoringAndAnomalyDetection.Infrastructure.Rag;
+namespace Lesson09.Agents.Features.Knowledge;
 
 public sealed class KnowledgeChunk
 {

@@ -1,4 +1,4 @@
-namespace Lesson09.Agents.Infrastructure.Rag;
+namespace Lesson09.Agents.Features.Knowledge;
 
 public sealed record KnowledgeSearchResult(
 	string Source,

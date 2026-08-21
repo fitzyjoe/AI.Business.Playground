@@ -2,7 +2,7 @@ using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.VectorData;
 
-namespace Lesson07.RetrievalAugmentedGeneration.Infrastructure.Rag;
+namespace Lesson11.ProductionAiPlatform.Features.Knowledge;
 
 public sealed class KnowledgeRetriever(
     VectorStore _vectorStore,
@@ -27,10 +27,7 @@ public sealed class KnowledgeRetriever(
             }
         };
         
-        _collection =
-            _vectorStore.GetCollection<
-                string,
-                KnowledgeChunk>("knowledge", definition);
+        _collection = _vectorStore.GetCollection<string, KnowledgeChunk>("knowledge", definition);
 
         await _collection.EnsureCollectionExistsAsync(cancellationToken);
 

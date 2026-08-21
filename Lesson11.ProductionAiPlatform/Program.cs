@@ -10,7 +10,6 @@ using Lesson11.ProductionAiPlatform.Infrastructure.Ai.Providers;
 using Lesson11.ProductionAiPlatform.Infrastructure.Authentication;
 using Lesson11.ProductionAiPlatform.Infrastructure.ErrorHandling;
 using Lesson11.ProductionAiPlatform.Infrastructure.Mcp;
-using Lesson11.ProductionAiPlatform.Infrastructure.Rag;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.AI;

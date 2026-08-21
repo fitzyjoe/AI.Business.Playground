@@ -1,5 +1,4 @@
 using System.ComponentModel;
-using Lesson11.ProductionAiPlatform.Infrastructure.Rag;
 
 namespace Lesson11.ProductionAiPlatform.Features.Knowledge;
 

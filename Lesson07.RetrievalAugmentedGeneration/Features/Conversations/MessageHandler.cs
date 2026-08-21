@@ -1,5 +1,5 @@
+using Lesson07.RetrievalAugmentedGeneration.Features.Knowledge;
 using Lesson07.RetrievalAugmentedGeneration.Infrastructure.Ai;
-using Lesson07.RetrievalAugmentedGeneration.Infrastructure.Rag;
 
 namespace Lesson07.RetrievalAugmentedGeneration.Features.Conversations;
 
@@ -8,9 +8,7 @@ public sealed class MessageHandler(
 	IAiProviderFactory _aiProviderFactory,
 	KnowledgeRetriever _knowledgeRetriever)
 {
-	public async Task<MessageResponse> HandleAsync(
-		MessageRequest messageRequest,
-		CancellationToken cancellationToken)
+	public async Task<MessageResponse> HandleAsync(MessageRequest messageRequest, CancellationToken cancellationToken)
 	{
 		Conversation conversation;
 		

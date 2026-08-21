@@ -7,9 +7,7 @@ public sealed class MessageHandler(
 	IConversationRepository _conversationRepository,
 	PropertyReviewAgent _propertyReviewAgent)
 {
-	public async Task<MessageResponse> HandleAsync(
-		MessageRequest messageRequest,
-		CancellationToken cancellationToken)
+	public async Task<MessageResponse> HandleAsync(MessageRequest messageRequest, CancellationToken cancellationToken)
 	{
 		Conversation conversation;
 		AgentSession session;

@@ -6,9 +6,7 @@ public sealed class MessageHandler(
 	IConversationRepository _conversationRepository,
 	IAiProviderFactory _aiProviderFactory)
 {
-	public async Task<MessageResponse> HandleAsync(
-		MessageRequest messageRequest,
-		CancellationToken cancellationToken)
+	public async Task<MessageResponse> HandleAsync(MessageRequest messageRequest, CancellationToken cancellationToken)
 	{
 		Conversation conversation;
 		

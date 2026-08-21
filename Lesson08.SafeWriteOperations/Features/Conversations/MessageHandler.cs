@@ -1,5 +1,5 @@
+using Lesson08.SafeWriteOperations.Features.Knowledge;
 using Lesson08.SafeWriteOperations.Infrastructure.Ai;
-using Lesson08.SafeWriteOperations.Infrastructure.Rag;
 
 namespace Lesson08.SafeWriteOperations.Features.Conversations;
 
@@ -8,9 +8,7 @@ public sealed class MessageHandler(
 	IAiProviderFactory _aiProviderFactory,
 	KnowledgeRetriever _knowledgeRetriever)
 {
-	public async Task<MessageResponse> HandleAsync(
-		MessageRequest messageRequest,
-		CancellationToken cancellationToken)
+	public async Task<MessageResponse> HandleAsync(MessageRequest messageRequest, CancellationToken cancellationToken)
 	{
 		Conversation conversation;
 		

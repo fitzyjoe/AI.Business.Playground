@@ -1,8 +1,6 @@
 using System.Collections.Concurrent;
 
-namespace Lesson07.RetrievalAugmentedGeneration.Infrastructure.Conversations;
-
-using Lesson07.RetrievalAugmentedGeneration.Features.Conversations;
+namespace Lesson03.LlmConversations.Features.Conversations;
 
 public sealed class InMemoryConversationRepository : IConversationRepository
 {

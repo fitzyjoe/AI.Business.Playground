@@ -1,7 +1,6 @@
 using System.Collections.Concurrent;
-using Lesson08.SafeWriteOperations.Features.PropertyReviews;
 
-namespace Lesson08.SafeWriteOperations.Infrastructure.PropertyReviews;
+namespace Lesson08.SafeWriteOperations.Features.PropertyReviews;
 
 public sealed class InMemoryPropertyReviewRepository : IPropertyReviewRepository
 {

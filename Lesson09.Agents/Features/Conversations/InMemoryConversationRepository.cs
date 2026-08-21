@@ -1,8 +1,6 @@
 using System.Collections.Concurrent;
 
-namespace Lesson09.Agents.Infrastructure.Conversations;
-
-using Lesson09.Agents.Features.Conversations;
+namespace Lesson09.Agents.Features.Conversations;
 
 public sealed class InMemoryConversationRepository : IConversationRepository
 {

@@ -1,7 +1,6 @@
 using System.Collections.Concurrent;
-using Lesson09.Agents.Features.PropertyReviews;
 
-namespace Lesson09.Agents.Infrastructure.PropertyReviews;
+namespace Lesson09.Agents.Features.PropertyReviews;
 
 public sealed class InMemoryPropertyReviewRepository : IPropertyReviewRepository
 {

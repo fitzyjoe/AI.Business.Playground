@@ -1,7 +1,6 @@
 ﻿using Lesson06.ConsumingMcpServers.Features.Conversations;
 using Lesson06.ConsumingMcpServers.Infrastructure.Ai;
 using Lesson06.ConsumingMcpServers.Infrastructure.Ai.Providers;
-using Lesson06.ConsumingMcpServers.Infrastructure.Conversations;
 using Lesson06.ConsumingMcpServers.Infrastructure.ErrorHandling;
 using Lesson06.ConsumingMcpServers.Infrastructure.Mcp;
 using Microsoft.Extensions.Options;

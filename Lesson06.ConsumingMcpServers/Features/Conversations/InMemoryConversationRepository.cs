@@ -1,8 +1,6 @@
 using System.Collections.Concurrent;
 
-namespace Lesson03.LlmConversations.Infrastructure.Conversations;
-
-using Lesson03.LlmConversations.Features.Conversations;
+namespace Lesson06.ConsumingMcpServers.Features.Conversations;
 
 public sealed class InMemoryConversationRepository : IConversationRepository
 {

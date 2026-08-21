@@ -1,8 +1,6 @@
 using System.Collections.Concurrent;
 
-namespace Lesson08.SafeWriteOperations.Infrastructure.Conversations;
-
-using Lesson08.SafeWriteOperations.Features.Conversations;
+namespace Lesson08.SafeWriteOperations.Features.Conversations;
 
 public sealed class InMemoryConversationRepository : IConversationRepository
 {

@@ -1,7 +1,6 @@
 ﻿using Lesson03.LlmConversations.Features.Conversations;
 using Lesson03.LlmConversations.Infrastructure.Ai;
 using Lesson03.LlmConversations.Infrastructure.Ai.Providers;
-using Lesson03.LlmConversations.Infrastructure.Conversations;
 using Lesson03.LlmConversations.Infrastructure.ErrorHandling;
 using Microsoft.Extensions.Options;
 

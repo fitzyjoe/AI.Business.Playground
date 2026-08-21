@@ -57,20 +57,21 @@ public sealed class BoundedChatClient : DelegatingChatClient
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         options = ApplyLimits(options);
+
         using var timeoutCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         timeoutCancellation.CancelAfter(TimeSpan.FromSeconds(_options.ProviderCallTimeoutSeconds));
 
         var acquired = false;
-        
+
         try
         {
             await _concurrencyGate.WaitAsync(timeoutCancellation.Token);
             acquired = true;
-            await foreach (var update in base
-                               .GetStreamingResponseAsync(
-                                   messages,
-                                   options,
-                                   timeoutCancellation.Token))
+
+            await foreach (var update in base.GetStreamingResponseAsync(
+                               messages,
+                               options,
+                               timeoutCancellation.Token))
             {
                 yield return update;
             }

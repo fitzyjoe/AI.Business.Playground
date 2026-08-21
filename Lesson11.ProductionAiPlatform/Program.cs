@@ -112,6 +112,12 @@ builder.Services
 builder.Services
 	.AddOptions<RagOptions>()
 	.Bind(builder.Configuration.GetSection("Rag"))
+	.Validate<IOptions<AiOptions>>(
+		(ragOptions, aiOptions) =>
+			aiOptions.Value.AllowedProviders.Contains(
+				ragOptions.EmbeddingProvider,
+				StringComparer.OrdinalIgnoreCase),
+		"EmbeddingProvider must appear in AiOptions.AllowedProviders.")
 	.Validate(
 		options => !string.IsNullOrWhiteSpace(options.EmbeddingModel),
 		"EmbeddingModel is required.")
@@ -139,33 +145,69 @@ builder.Services.AddTransient<MessageHandler>();
 builder.Services.AddSingleton<IConversationRepository, InMemoryConversationRepository>();
 builder.Services.AddSingleton<PropertyMcpClient>();
 
-// RAG embeddings remain local through Ollama.
+// RAG for ollama
+builder.Services
+	.AddKeyedSingleton<IEmbeddingGenerator<string, Embedding<float>>>(
+		"ollama",
+		(serviceProvider, _) =>
+		{
+			var httpClient = serviceProvider
+				.GetRequiredService<IHttpClientFactory>()
+				.CreateClient();
+
+			var ollamaOptions = serviceProvider
+				.GetRequiredService<IOptions<OllamaOptions>>()
+				.Value;
+
+			var ragOptions = serviceProvider
+				.GetRequiredService<IOptions<RagOptions>>()
+				.Value;
+
+			httpClient.BaseAddress = new Uri(ollamaOptions.Endpoint);
+
+			IEmbeddingGenerator<string, Embedding<float>> generator =
+				new OllamaApiClient(httpClient);
+
+			return generator
+				.AsBuilder()
+				.ConfigureOptions(options =>
+				{
+					options.ModelId = ragOptions.EmbeddingModel;
+				})
+				.Build();
+		});
+
+// RAG for OpenAI
+builder.Services
+	.AddKeyedSingleton<IEmbeddingGenerator<string, Embedding<float>>>(
+		"openai",
+		(serviceProvider, _) =>
+		{
+			var ragOptions = serviceProvider
+				.GetRequiredService<IOptions<RagOptions>>()
+				.Value;
+
+			var apiKey = Environment.GetEnvironmentVariable("OPENAI_AI_BUSINESS_PLAYGROUND")
+			             ?? throw new InvalidOperationException(
+				             "OPENAI_AI_BUSINESS_PLAYGROUND environment variable is required.");
+
+			return new OpenAI.Embeddings.EmbeddingClient(
+					ragOptions.EmbeddingModel,
+					apiKey)
+				.AsIEmbeddingGenerator(ragOptions.EmbeddingDimensions);
+		});
+
+// RAG
 builder.Services.AddSingleton<VectorStore>(
 	serviceProvider =>
 	{
-		var httpClient = serviceProvider
-			.GetRequiredService<IHttpClientFactory>()
-			.CreateClient();
-
-		var ollamaOptions = serviceProvider
-			.GetRequiredService<IOptions<OllamaOptions>>()
-			.Value;
-
 		var ragOptions = serviceProvider
 			.GetRequiredService<IOptions<RagOptions>>()
 			.Value;
 
-		httpClient.BaseAddress = new Uri(ollamaOptions.Endpoint);
-
-		IEmbeddingGenerator<string, Embedding<float>> generator = new OllamaApiClient(httpClient);
-
-		var embeddingGenerator = generator
-			.AsBuilder()
-			.ConfigureOptions(options =>
-			{
-				options.ModelId = ragOptions.EmbeddingModel;
-			})
-			.Build();
+		var embeddingGenerator = serviceProvider
+			.GetRequiredKeyedService<IEmbeddingGenerator<string, Embedding<float>>>(
+				ragOptions.EmbeddingProvider);
 
 		return new InMemoryVectorStore(
 			new InMemoryVectorStoreOptions
@@ -173,6 +215,7 @@ builder.Services.AddSingleton<VectorStore>(
 				EmbeddingGenerator = embeddingGenerator
 			});
 	});
+
 
 // GenAI telemetry is exported to the console for the lesson.
 builder.Services

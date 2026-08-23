@@ -7,9 +7,8 @@ namespace Lesson04.StructuredOutputs.Features.Correspondence;
 public sealed class AnalyzeCorrespondenceHandler(
 	IAiProviderFactory _aiProviderFactory)
 {
-	private const string ProviderName = "ollama";
-
-	public async Task<AnalyzeCorrespondenceResponse> HandleAsync(AnalyzeCorrespondenceRequest request,
+	public async Task<AnalyzeCorrespondenceResponse> HandleAsync(
+		AnalyzeCorrespondenceRequest request,
 		CancellationToken cancellationToken)
 	{
 		var schema = StructuredOutputJson.Options.GetJsonSchemaAsNode(typeof(CorrespondenceAnalysis));
@@ -19,7 +18,7 @@ public sealed class AnalyzeCorrespondenceHandler(
 			[
 				new AiChatMessage
 				{
-					Role = AiMessageRole.System, 
+					Role = AiMessageRole.System,
 					Content = BuildSystemPrompt()
 				},
 				new AiChatMessage
@@ -30,13 +29,13 @@ public sealed class AnalyzeCorrespondenceHandler(
 			],
 
 			// Extraction should be consistent rather than creative.
-			Temperature = 0, 
+			Temperature = 0,
 			ResponseFormat = schema,
 
 			// Wait for one complete JSON object.
 			Stream = false
 		};
-		var provider = _aiProviderFactory.GetProvider(ProviderName);
+		var provider = _aiProviderFactory.GetProvider(request.Provider);
 		var aiResponse = await provider.SendAsync(aiRequest, cancellationToken);
 		var analysis = Deserialize(aiResponse.Text).NormalizeAndValidate();
 		return new AnalyzeCorrespondenceResponse(analysis, aiResponse.Model, aiResponse.Duration);

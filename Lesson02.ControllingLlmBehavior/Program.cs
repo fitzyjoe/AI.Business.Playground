@@ -19,6 +19,14 @@ builder.Services
 		"An Ollama default model is required.")
 	.ValidateOnStart();
 
+builder.Services
+	.AddOptions<OpenAiOptions>()
+	.Bind(builder.Configuration.GetSection("OpenAI"))
+	.Validate(
+		options => !string.IsNullOrWhiteSpace(options.Model),
+		"An OpenAI default model is required.")
+	.ValidateOnStart();
+
 builder.Services.AddHttpClient<OllamaProvider>(
 	(serviceProvider, httpClient) =>
 	{
@@ -29,6 +37,7 @@ builder.Services.AddHttpClient<OllamaProvider>(
 		httpClient.BaseAddress = new Uri(options.Endpoint);
 	});
 
+builder.Services.AddTransient<OpenAiProvider>();
 builder.Services.AddTransient<IAiProviderFactory, AiProviderFactory>();
 builder.Services.AddTransient<Handler>();
 

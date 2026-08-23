@@ -22,6 +22,14 @@ builder.Services
 	.ValidateOnStart();
 
 builder.Services
+	.AddOptions<OpenAiOptions>()
+	.Bind(builder.Configuration.GetSection("OpenAI"))
+	.Validate(
+		options => !string.IsNullOrWhiteSpace(options.Model),
+		"An OpenAI default model is required.")
+	.ValidateOnStart();
+
+builder.Services
 	.AddControllers()
 	.AddJsonOptions(options =>
 	{
@@ -41,6 +49,7 @@ builder.Services.AddHttpClient<OllamaProvider>(
 		httpClient.BaseAddress = new Uri(options.Endpoint);
 	});
 
+builder.Services.AddTransient<OpenAiProvider>();
 builder.Services.AddTransient<IAiProviderFactory, AiProviderFactory>();
 builder.Services.AddScoped<AnalyzeCorrespondenceHandler>();
 

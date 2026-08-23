@@ -84,10 +84,10 @@ Lesson01.BasicPrompting/
 ├── Features/
 │   └── Models/
 │       └── Execute/
+│           ├── AiRequest.cs
 │           ├── AiResponse.cs
 │           ├── Endpoint.cs
-│           ├── Handler.cs
-│           └── Request.cs
+│           └── Handler.cs
 ├── Infrastructure/
 │   └── Ai/
 │       ├── IAiProvider.cs
@@ -125,7 +125,7 @@ The request contains a single value:
 The request model is intentionally minimal:
 
 ```csharp
-public sealed class Request
+public sealed class AiRequest
 {
     public required string Prompt { get; init; }
 }
@@ -209,7 +209,7 @@ curl
  ↓
 POST /api/prompt
  ↓
-Request
+AiRequest
  ↓
 Handler
  ↓
@@ -237,7 +237,7 @@ Conceptually:
 ```csharp
 app.MapPost(
     "/api/prompt",
-    async (Request request, Handler handler, CancellationToken cancellationToken) =>
+    async (AiRequest request, Handler handler, CancellationToken cancellationToken) =>
     {
         var response = await handler.Handle(request, cancellationToken);
         return Results.Ok(response);
@@ -266,7 +266,7 @@ That separation matters even in a small lesson.
 Its job is simple:
 
 ```text
-receive Request
+receive AiRequest
     ↓
 call IAiProvider
     ↓
@@ -299,7 +299,7 @@ The provider abstraction is small:
 public interface IAiProvider
 {
     Task<AiResponse> SendAsync(
-        Request request,
+        AiRequest request,
         CancellationToken cancellationToken = default);
 }
 ```
@@ -357,7 +357,7 @@ Content: request.Prompt
 Conceptually:
 
 ```text
-Request.Prompt
+AiRequest.Prompt
     ↓
 Ollama ChatRequest
     ↓
@@ -515,7 +515,7 @@ Features/Models/Execute/
 The files involved in the use case are colocated:
 
 ```text
-Request
+AiRequest
 AiResponse
 Endpoint
 Handler

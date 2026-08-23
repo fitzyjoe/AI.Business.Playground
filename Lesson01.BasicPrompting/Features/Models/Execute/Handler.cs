@@ -1,20 +1,12 @@
-using Lesson01.Chat.Infrastructure.Ai;
+using Lesson01.BasicPrompting.Infrastructure.Ai;
 
-namespace Lesson01.Chat.Features.Models.Execute;
+namespace Lesson01.BasicPrompting.Features.Models.Execute;
 
-
-public sealed class Handler(
-	IAiProvider aiProvider)
+public sealed class Handler(IAiProvider aiProvider)
 {
-	public async Task<AiResponse> Handle(
-		Request request,
-		CancellationToken cancellationToken)
+	public async Task<AiResponse> Handle(AiRequest aiRequest, CancellationToken cancellationToken)
 	{
-		AiResponse aiAiResponse =
-			await aiProvider.SendAsync(
-				request,
-				cancellationToken);
-		
+		var aiAiResponse = await aiProvider.SendAsync(aiRequest, cancellationToken);
 		return aiAiResponse;
 	}
 }

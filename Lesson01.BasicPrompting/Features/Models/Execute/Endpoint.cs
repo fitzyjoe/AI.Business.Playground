@@ -1,6 +1,4 @@
-using Lesson01.Chat.Features.Models.Execute;
-
-namespace Lesson01.Chat.Features.Models.Execute;
+namespace Lesson01.BasicPrompting.Features.Models.Execute;
 
 public static class Endpoint
 {
@@ -8,11 +6,11 @@ public static class Endpoint
 	{
 		app.MapPost("/api/prompt",
 				async (
-					Request request,
+					AiRequest aiRequest,
 					Handler handler,
 					CancellationToken cancellationToken) =>
 				{
-					var response = await handler.Handle(request, cancellationToken);
+					var response = await handler.Handle(aiRequest, cancellationToken);
 					return Results.Ok(response);
 				})
 			.WithName("ExecutePromptPost")

@@ -1,10 +1,10 @@
-using Lesson01.Chat.Features.Models.Execute;
+using Lesson01.BasicPrompting.Features.Models.Execute;
 using OllamaSharp;
 using OllamaSharp.Models.Chat;
 using System.Text;
 using Microsoft.Extensions.Options;
 
-namespace Lesson01.Chat.Infrastructure.Ai.Providers;
+namespace Lesson01.BasicPrompting.Infrastructure.Ai.Providers;
 
 public sealed class OllamaProvider : IAiProvider
 {
@@ -20,13 +20,13 @@ public sealed class OllamaProvider : IAiProvider
 	}
 	
 	public async Task<AiResponse> SendAsync(
-		Request request,
+		AiRequest aiRequest,
 		CancellationToken cancellationToken = default)
 	{
 		var sb = new StringBuilder();
 		var chatRequest = new ChatRequest
 		{
-			Messages = [new Message { Role = ChatRole.User, Content = request.Prompt }]
+			Messages = [new Message { Role = ChatRole.User, Content = aiRequest.Prompt }]
 		};
 		
 		var startTime = DateTime.Now;

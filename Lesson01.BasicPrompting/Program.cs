@@ -1,6 +1,6 @@
-﻿using Lesson01.Chat.Features.Models.Execute;
-using Lesson01.Chat.Infrastructure.Ai;
-using Lesson01.Chat.Infrastructure.Ai.Providers;
+﻿using Lesson01.BasicPrompting.Features.Models.Execute;
+using Lesson01.BasicPrompting.Infrastructure.Ai;
+using Lesson01.BasicPrompting.Infrastructure.Ai.Providers;
 
 var builder = WebApplication.CreateBuilder(args);
 

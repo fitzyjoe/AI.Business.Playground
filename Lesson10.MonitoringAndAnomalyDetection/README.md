@@ -4,12 +4,10 @@
 
 Lesson10 separates two responsibilities:
 
-1. **deterministic code detects that something is unusual**;
-2. **an AI agent investigates what may explain it**.
+1. deterministic code detects that something is unusual;
+2. an AI agent investigates what may explain it.
 
 The LLM does not decide whether a metric is statistically anomalous. `RollingZScoreDetector` does that first. Only when anomaly candidates exist does the application invoke `AnomalyAnalysisAgent`.
-
-The agent then decides what additional evidence it needs and can autonomously call monitoring tools.
 
 ```text
 operational metrics
@@ -27,7 +25,7 @@ AnomalyAnalysisAgent
 MonitoringAssessment
 ```
 
-The main design boundary is:
+The main boundary is:
 
 ```text
 detect                 → deterministic/statistical code
@@ -48,15 +46,44 @@ This lesson demonstrates:
 - how to invoke an LLM only when an anomaly deserves investigation;
 - how an agent can choose its own evidence-gathering tools;
 - how application code constrains agent-selected tool arguments;
-- how one investigation can correlate multiple anomalous metrics;
 - how structured output provides a predictable result contract;
-- how the same agent architecture can run against different AI providers.
+- how the same agent architecture can run against Ollama or OpenAI;
+- how chat/agent provider choice remains separate from the RAG embedding provider.
+
+---
+
+## Provider Story in Lesson10
+
+By Lesson10 there are three distinct provider selections in the application:
+
+```text
+Conversation.Provider
+    → provider for user-facing agent conversations
+
+Monitoring.Provider
+    → provider used by AnomalyAnalysisAgent
+
+Rag.EmbeddingProvider
+    → provider used to embed/search internal knowledge
+```
+
+They are related through common provider concepts, but they serve different workloads and do not need to have the same value.
+
+For example:
+
+```text
+Conversation chat:   ollama
+Monitoring agent:    openai
+Knowledge embeddings: openai
+```
+
+is a valid configuration.
 
 ---
 
 ## Sample Monitoring Data
 
-`MonitoringDataSource` contains **100 hourly observations for each metric**:
+`MonitoringDataSource` contains 100 hourly observations for each sample metric:
 
 ```text
 documents_processed
@@ -64,53 +91,37 @@ average_processing_minutes
 error_rate_percent
 ```
 
-The first 99 observations represent stable operation. The final observation is intentionally abnormal:
-
-```text
-documents_processed          → 412
-average_processing_minutes   → 12.6
-error_rate_percent           → 7.8
-```
-
-The data source also contains operational events, including a deployment of version 4.8 twenty minutes before the anomalous observations.
-
-Deployment details are available separately and include:
-
-```text
-Upgraded the document parser library
-Increased queue-processing concurrency from 12 to 48
-Changed the retry policy from 3 attempts to 1 attempt
-```
-
-The agent sees those details only if it chooses to call `get_deployment_details`.
+The final observation is intentionally abnormal. The data source also includes recent operational events and deployment details so the agent has evidence it can choose to inspect.
 
 ---
 
 ## Phase 1 — Deterministic Detection
 
-`MonitoringService` asks for 13 observations per metric:
+`MonitoringService` obtains a small recent window and asks `RollingZScoreDetector` to compare the latest observation with the previous baseline observations.
+
+If the threshold is not exceeded:
 
 ```text
-12 baseline observations
-+ 1 current observation
-= 13 observations
+no anomaly candidates
+    ↓
+no LLM call
 ```
 
-`RollingZScoreDetector` compares the latest value with the mean and standard deviation of the previous 12 values.
+If candidates exist:
 
-If the threshold is exceeded, it creates an `AnomalyCandidate` containing the metric, timestamp, current value, baseline mean, baseline standard deviation, and z-score.
+```text
+AnomalyCandidate[]
+    ↓
+AnomalyAnalysisAgent
+```
 
-If no candidates exist, the method returns without calling the LLM.
-
-This keeps the repetitive numerical work cheap, predictable, testable, and reproducible.
+This keeps repetitive numerical detection cheap, predictable, testable, and reproducible.
 
 ---
 
 ## Phase 2 — Agent-Driven Investigation
 
-When anomaly candidates exist, they are passed together to `AnomalyAnalysisAgent`.
-
-The application does not automatically gather all supporting evidence first. The agent receives three capabilities:
+The agent receives bounded tools:
 
 ```text
 get_metric_history
@@ -118,129 +129,49 @@ get_recent_operational_events
 get_deployment_details
 ```
 
-The prompt does not prescribe a fixed workflow. The agent decides what evidence is useful.
-
-A representative investigation might be:
+A representative flow is:
 
 ```text
 receive anomaly candidates
-        ↓
-request longer metric history
-        ↓
+    ↓
+request wider metric history
+    ↓
 notice several metrics changed together
-        ↓
+    ↓
 request recent operational events
-        ↓
-notice deployment 4.8 nearby
-        ↓
+    ↓
+notice nearby deployment
+    ↓
 request deployment details
-        ↓
-correlate evidence and form hypotheses
-        ↓
+    ↓
 return MonitoringAssessment
 ```
 
-This demonstrates the agent loop:
-
-```text
-reason → retrieve → reason → retrieve → conclude
-```
+The prompt does not prescribe an exact tool order. The agent decides what evidence is useful.
 
 ---
 
-## Why Metric History Is Read Twice
+## Bounded Agent Autonomy
 
-Both the deterministic detector and the agent may request metric history, but they are answering different questions.
+The model proposes tool arguments, but application code constrains them.
 
-The detector asks:
+For example, history windows are clamped to bounded ranges.
 
-> Is the latest observation unusual enough to investigate?
+The principle is:
 
-The agent asks:
-
-> What historical evidence would help explain the anomaly?
-
-The duplication is intentional because it keeps detection and investigation separate.
-
-The sample now contains 100 observations, so an agent request for 48 or 100 points can return substantially more context than the detector's 13-point window.
+> **Agent autonomy operates inside boundaries established by application code.**
 
 ---
 
-## Tool Boundaries
+## Chat Providers
 
-The model chooses tool arguments, but application code limits them.
+Both Ollama and OpenAI are registered `IAiProvider` implementations.
 
-For example:
+`AiProviderFactory` discovers them by `Name`, as introduced in Lesson09.
 
-```csharp
-points = Math.Clamp(points, 1, 168);
-hours = Math.Clamp(hours, 1, 168);
-```
+`MonitoringOptions.Provider` chooses which provider backs `AnomalyAnalysisAgent`.
 
-The agent can decide that it wants a wider history window, but it cannot request an unbounded amount of data.
-
-This is an important production principle:
-
-> Agent autonomy operates inside boundaries established by application code.
-
----
-
-## Tool-Call Diagnostics
-
-`MonitoringDataSource` currently writes simple console messages whenever its methods are called.
-
-For example:
-
-```text
-*** GET METRIC HISTORY CALLED: documents_processed 13 ***
-*** GET RECENT EVENTS CALLED: 48 ***
-*** GET METRIC HISTORY CALLED: documents_processed 48 ***
-*** GET DEPLOYMENT DETAILS CALLED: 4.8 ***
-```
-
-The 13-point metric-history calls are made directly by `MonitoringService` for deterministic detection. They are not agent tool calls.
-
-Later wider history requests, event lookups, and deployment-detail requests may be agent-selected calls.
-
----
-
-## Structured Output
-
-The agent returns a strongly typed result:
-
-```csharp
-public sealed record MonitoringAssessment(
-    string Severity,
-    string Summary,
-    string[] Correlations,
-    RelevantOperationalEvent[] RelevantEvents,
-    string[] PossibleCauses,
-    string[] RecommendedChecks);
-```
-
-The investigation path is flexible, while the application result shape remains predictable.
-
-The instructions also tell the model to distinguish observations from hypotheses and to treat temporal proximity as correlation rather than proof of causation.
-
----
-
-## Provider Abstraction
-
-Lesson10 includes both `OllamaProvider` and `OpenAiProvider` behind the existing `IAiProvider` abstraction.
-
-```text
-Monitoring.Provider
-        ↓
-IAiProviderFactory
-        ↓
-IAiProvider
-        ↓
-IChatClient
-        ↓
-ChatClientAgent
-```
-
-The monitoring provider is selected in `appsettings.json`:
+Example:
 
 ```json
 "Monitoring": {
@@ -248,149 +179,185 @@ The monitoring provider is selected in `appsettings.json`:
 }
 ```
 
-The agent itself contains no OpenAI-specific branching logic.
-
-### Why OpenAI is the monitoring default
-
-During development, the current Ollama/Qwen configuration did not reliably emit tool calls when tool calling and strongly typed structured output were requested together. Without the structured-output requirement, it did call the tool.
-
-With OpenAI, the same agent architecture successfully performed autonomous tool calls while returning the typed `MonitoringAssessment`.
-
-This is a useful example of why a provider abstraction matters: application architecture can remain stable even when provider/model capabilities differ.
+Changing that setting does not change deterministic anomaly detection. It only changes the model used for the investigation phase.
 
 ---
 
-## OpenAI Configuration
+## RAG Embedding Provider
 
-The model is configured in `appsettings.json`:
+Lesson10 preserves the independent embedding-provider choice introduced in Lesson07:
 
 ```json
-"OpenAI": {
-  "Model": "gpt-5.2"
+"Rag": {
+  "EmbeddingProvider": "ollama",
+  "EmbeddingModel": "embeddinggemma",
+  "EmbeddingDimensions": 768,
+  "TopResults": 3
 }
 ```
 
-The API key is not stored in the repository. Set it as an environment variable:
+or, for example:
+
+```json
+"Rag": {
+  "EmbeddingProvider": "openai",
+  "EmbeddingModel": "text-embedding-3-small",
+  "EmbeddingDimensions": 768,
+  "TopResults": 3
+}
+```
+
+The vector store resolves the configured embedding generator independently from the chat/monitoring providers.
+
+Changing embedding provider/model/dimensions means the index should be rebuilt. This lesson's in-memory knowledge index is regenerated at startup.
+
+---
+
+## Configuration
+
+A representative configuration is:
+
+```json
+{
+  "Ollama": {
+    "Endpoint": "http://localhost:11434",
+    "Model": "qwen3:8b"
+  },
+  "OpenAI": {
+    "Model": "gpt-5.2"
+  },
+  "Rag": {
+    "EmbeddingProvider": "ollama",
+    "EmbeddingModel": "embeddinggemma",
+    "EmbeddingDimensions": 768,
+    "TopResults": 3
+  },
+  "Monitoring": {
+    "Provider": "openai"
+  }
+}
+```
+
+Set the OpenAI key whenever an OpenAI chat or embedding workload will be used:
 
 ```bash
 export OPENAI_AI_BUSINESS_PLAYGROUND="your-api-key"
 ```
 
-On macOS this can be placed in `~/.zshrc` and loaded with:
+---
 
-```bash
-source ~/.zshrc
+## Project Structure
+
+```text
+Lesson10.MonitoringAndAnomalyDetection/
+├── Features/
+│   ├── Agents/
+│   ├── Conversations/
+│   ├── Knowledge/
+│   │   ├── KnowledgeRetriever.cs
+│   │   ├── KnowledgeTools.cs
+│   │   └── RagOptions.cs
+│   ├── Monitoring/
+│   │   ├── AnomalyAnalysisAgent.cs
+│   │   ├── MonitoringDataSource.cs
+│   │   ├── MonitoringService.cs
+│   │   ├── MonitoringTools.cs
+│   │   ├── RollingZScoreDetector.cs
+│   │   └── ...
+│   └── PropertyReviews/
+├── Infrastructure/
+│   ├── Ai/
+│   │   └── Providers/
+│   │       ├── OllamaProvider.cs
+│   │       └── OpenAiProvider.cs
+│   ├── ErrorHandling/
+│   └── Mcp/
+├── Knowledge/
+├── Program.cs
+├── appsettings.json
+└── README.md
 ```
 
 ---
 
-## Existing Lesson Capabilities
+## Structured Investigation Result
 
-Lesson10 remains a snapshot of the application and preserves earlier capabilities such as conversations, Agent Framework sessions, property MCP tools, RAG, and safe property-review proposals.
+The agent returns a strongly typed `MonitoringAssessment`, containing fields such as:
 
-The inherited RAG implementation still uses Ollama embeddings, so Ollama remains part of application startup even when monitoring uses OpenAI.
+```text
+Severity
+Summary
+Correlations
+RelevantEvents
+PossibleCauses
+RecommendedChecks
+```
+
+Structured output makes the investigation useful to application code rather than only as prose.
 
 ---
 
-## Running the Lesson
-
-Build the Lesson05 MCP server first:
+## Running Lesson10
 
 ```bash
-dotnet build Lesson05.McpFundamentals/Lesson05.McpFundamentals.csproj
-```
-
-Make sure Ollama is running, set the OpenAI key, and then run Lesson10 from the repository root:
-
-```bash
-ASPNETCORE_URLS=http://localhost:5000 \
 dotnet run --project Lesson10.MonitoringAndAnomalyDetection
 ```
 
-Run a monitoring scan:
+Use the lesson's monitoring endpoint to trigger the deterministic detector and, when anomalies are found, the agent investigation.
 
-```bash
-curl -s \
-  http://localhost:5000/api/monitoring/scan \
-  | jq .
-```
-
-The deterministic detector should identify the intentionally abnormal final observations and invoke the anomaly-analysis agent.
-
-The exact wording and tool-call sequence may vary because the model chooses how to investigate.
+Console output from `MonitoringDataSource` helps distinguish deterministic data reads from later agent-selected tool calls.
 
 ---
 
-## What to Observe
+## Evaluation Mindset
 
-There are two distinct behaviors to watch.
+Do not evaluate the agent by requiring an exact tool sequence or exact wording.
 
-### Deterministic behavior
+Prefer outcome checks such as:
 
 ```text
-metric history
-    ↓
-RollingZScoreDetector
-    ↓
-AnomalyCandidate
+Did deterministic detection find the planted anomaly?
+Did the agent inspect evidence relevant to the anomaly?
+Did it identify the nearby deployment as relevant when supported by evidence?
+Did it avoid inventing events or metrics?
+Did it return a valid MonitoringAssessment?
 ```
 
-The application always performs the short history reads required for detection.
-
-### Agent behavior
-
-Once candidates exist, the model can independently decide to:
-
-- inspect longer history windows;
-- retrieve recent operational events;
-- ignore irrelevant events;
-- inspect a temporally relevant deployment;
-- correlate changes across multiple metrics;
-- recommend human diagnostic checks.
-
-The model is given capabilities and investigative guidance, not a hard-coded workflow.
+Different providers may follow different reasonable investigation paths.
 
 ---
 
-## Simplifications
+## Deliberately Out of Scope
 
-This is a teaching sample rather than a production monitoring platform.
+Lesson10 does not yet add the production controls introduced later, such as:
 
-It uses:
-
-- in-memory synthetic telemetry;
-- only three metrics;
-- hourly observations;
-- a simple rolling z-score detector;
-- synthetic operational events and deployment details;
-- read-only agent tools;
-- model-selected investigation paths that can vary between runs.
-
-A production system could replace `MonitoringDataSource` with real telemetry, logging, deployment, and incident systems while preserving the same boundary between deterministic detection and agent-driven investigation.
-
-`RollingZScoreDetector` is also deliberately simple. Real systems may use seasonal baselines, robust statistics, change-point detection, forecasting, or service-specific thresholds.
+- authentication and authorization;
+- global provider allowlists;
+- bounded provider concurrency;
+- provider-call timeouts;
+- production telemetry;
+- production evaluation suites;
+- cost budgets;
+- durable monitoring history.
 
 ---
 
-## Key Takeaway
-
-Lesson10 demonstrates a practical division of responsibility:
+## Lesson10 Acceptance Criteria
 
 ```text
-Deterministic code
-    identifies what deserves attention
-
-Agent
-    decides what evidence it needs
-
-Tools
-    provide bounded access to evidence
-
-LLM
-    correlates observations and forms hypotheses
-
-Structured output
-    returns a predictable application contract
+✓ deterministic code detects anomaly candidates before any LLM call
+✓ no LLM investigation occurs when no anomaly exists
+✓ AnomalyAnalysisAgent can use bounded monitoring tools
+✓ Monitoring.Provider can select Ollama or OpenAI
+✓ user-facing conversations can independently select Ollama or OpenAI
+✓ Rag.EmbeddingProvider can independently select Ollama or OpenAI
+✓ structured MonitoringAssessment is returned
+✓ provider choice does not alter the deterministic detection boundary
+✓ tool autonomy remains bounded by application code
 ```
 
-The important idea is not that an LLM can recognize a large number. It is that deterministic monitoring can identify an unusual condition and then hand that condition to an agent that autonomously investigates the surrounding evidence before producing a useful structured assessment.
+---
+
+## What Lesson10 Is Really Teaching
+
+> **Use deterministic code to detect that something is wrong, then use a bounded AI agent to investigate why—without coupling that workflow to one model provider or one embedding provider.**

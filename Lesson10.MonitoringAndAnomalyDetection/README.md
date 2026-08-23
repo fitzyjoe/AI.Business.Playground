@@ -301,6 +301,8 @@ Structured output makes the investigation useful to application code rather than
 
 ```bash
 dotnet run --project Lesson10.MonitoringAndAnomalyDetection
+
+curl -s http://localhost:5000/api/monitoring/scan | jq .
 ```
 
 Use the lesson's monitoring endpoint to trigger the deterministic detector and, when anomalies are found, the agent investigation.

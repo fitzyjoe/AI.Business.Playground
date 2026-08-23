@@ -29,11 +29,23 @@ builder.Services
 	.ValidateOnStart();
 
 builder.Services
+	.AddOptions<OpenAiOptions>()
+	.Bind(builder.Configuration.GetSection("OpenAI"))
+	.Validate(
+		options => !string.IsNullOrWhiteSpace(options.Model),
+		"An OpenAI default model is required.")
+	.ValidateOnStart();
+
+builder.Services
 	.AddOptions<RagOptions>()
 	.Bind(builder.Configuration.GetSection("Rag"))
 	.Validate(
 		options =>
-			!string.IsNullOrWhiteSpace(options.EmbeddingModel),
+			string.Equals(options.EmbeddingProvider, "ollama", StringComparison.OrdinalIgnoreCase) ||
+			string.Equals(options.EmbeddingProvider, "openai", StringComparison.OrdinalIgnoreCase),
+		"EmbeddingProvider must be 'ollama' or 'openai'.")
+	.Validate(
+		options => !string.IsNullOrWhiteSpace(options.EmbeddingModel),
 		"EmbeddingModel is required.")
 	.Validate(
 		options => options.EmbeddingDimensions > 0,
@@ -70,49 +82,70 @@ builder.Services.AddHttpClient(
 		httpClient.BaseAddress = new Uri(options.Endpoint);
 	});
 
+builder.Services.AddTransient<OpenAiProvider>();
 builder.Services.AddTransient<IAiProviderFactory, AiProviderFactory>();
 builder.Services.AddTransient<MessageHandler>();
 builder.Services.AddSingleton<IConversationRepository, InMemoryConversationRepository>();
 builder.Services.AddSingleton<PropertyMcpClient>();
 
-builder.Services.AddSingleton<IEmbeddingGenerator<string, Embedding<float>>>(
-	serviceProvider =>
-	{
-		var httpClient = serviceProvider
-			.GetRequiredService<IHttpClientFactory>()
-			.CreateClient("OllamaEmbeddings");
+builder.Services
+	.AddKeyedSingleton<IEmbeddingGenerator<string, Embedding<float>>>(
+		"ollama",
+		(serviceProvider, _) =>
+		{
+			var httpClient = serviceProvider
+				.GetRequiredService<IHttpClientFactory>()
+				.CreateClient("OllamaEmbeddings");
 
-		var ragOptions = serviceProvider
-			.GetRequiredService<IOptions<RagOptions>>()
-			.Value;
+			var ragOptions = serviceProvider
+				.GetRequiredService<IOptions<RagOptions>>()
+				.Value;
 
-		IEmbeddingGenerator<string, Embedding<float>> generator =
-			new OllamaApiClient(httpClient);
+			IEmbeddingGenerator<string, Embedding<float>> generator = new OllamaApiClient(httpClient);
 
-		return generator
-			.AsBuilder()
-			.ConfigureOptions(options =>
-			{
-				options.ModelId =
-					ragOptions.EmbeddingModel;
-			})
-			.Build();
-	});
+			return generator
+				.AsBuilder()
+				.ConfigureOptions(options =>
+				{
+					options.ModelId = ragOptions.EmbeddingModel;
+				})
+				.Build();
+		});
+
+builder.Services
+	.AddKeyedSingleton<IEmbeddingGenerator<string, Embedding<float>>>(
+		"openai",
+		(serviceProvider, _) =>
+		{
+			var ragOptions = serviceProvider
+				.GetRequiredService<IOptions<RagOptions>>()
+				.Value;
+
+			var apiKey = Environment.GetEnvironmentVariable("OPENAI_AI_BUSINESS_PLAYGROUND")
+			             ?? throw new InvalidOperationException(
+				             "OPENAI_AI_BUSINESS_PLAYGROUND environment variable is required.");
+
+			return new OpenAI.Embeddings.EmbeddingClient(
+					ragOptions.EmbeddingModel,
+					apiKey)
+				.AsIEmbeddingGenerator(ragOptions.EmbeddingDimensions);
+		});
 
 builder.Services.AddSingleton<VectorStore>(
 	serviceProvider =>
 	{
-		var embeddingGenerator =
-			serviceProvider.GetRequiredService<
-				IEmbeddingGenerator<
-					string,
-					Embedding<float>>>();
+		var ragOptions = serviceProvider
+			.GetRequiredService<IOptions<RagOptions>>()
+			.Value;
+
+		var embeddingGenerator = serviceProvider
+			.GetRequiredKeyedService<IEmbeddingGenerator<string, Embedding<float>>>(
+				ragOptions.EmbeddingProvider);
 
 		return new InMemoryVectorStore(
 			new InMemoryVectorStoreOptions
 			{
-				EmbeddingGenerator =
-					embeddingGenerator
+				EmbeddingGenerator = embeddingGenerator
 			});
 	});
 

@@ -274,41 +274,9 @@ curl -X POST \
 
 ---
 
-## Useful Experiments
+## Hands-On Lab
 
-### Compare Providers
-
-Send the same prompt, system prompt, temperature, and output limit to both providers.
-
-Compare:
-
-```text
-response quality
-latency
-writing style
-instruction following
-```
-
-The goal is not to prove one provider is better. The goal is to see that the feature can remain stable while the implementation changes.
-
-### Compare Temperatures
-
-Run the same request several times at `0.0`, then at a higher value such as `1.0`.
-
-### Model Override
-
-Try another model supported by the selected provider without changing `appsettings.json`.
-
-### Unsupported Provider
-
-```json
-{
-  "prompt": "Hello",
-  "provider": "unknown"
-}
-```
-
-The factory should reject the request because only `ollama` and `openai` are supported.
+The learner-directed provider comparison, temperature, model override, output-limit, and unsupported-provider experiments are in [LAB.md](LAB.md).
 
 ---
 

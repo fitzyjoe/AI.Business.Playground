@@ -15,11 +15,13 @@ Add one request-level control, `MaxTokens`, all the way through the application 
 
 ## Run the Starter
 
-Run Lesson02 and send the same prompt through Ollama and OpenAI. Observe that the starter still supports the other controls but intentionally leaves `MaxTokens` incomplete.
+Run Lesson02:
 
 ```bash
 dotnet run --project Lesson02.ControllingLlmBehavior
 ```
+
+Send the same basic prompt through Ollama and OpenAI using the examples in [README.md](README.md). Observe that the starter still supports the other controls but intentionally leaves `MaxTokens` incomplete.
 
 ## Build — Add `MaxTokens`
 
@@ -33,28 +35,134 @@ Implement `MaxTokens` end to end:
 
 Do not introduce provider SDK types into the feature layer.
 
-## Run — Compare Behavior
+## Run — Compare Providers
 
-Call each provider with the same prompt and a small output limit, then repeat with a larger limit. Compare the returned text and duration.
+Send the same prompt, system prompt, temperature, and output limit to both providers.
 
-Also verify that requests without `maxTokens` still work.
+Ollama:
 
-## Attack
+```bash
+curl -X POST \
+  http://localhost:5000/api/prompt \
+  -H "Content-Type: application/json" \
+  -d '{
+    "prompt": "Explain dependency injection in one paragraph.",
+    "systemPrompt": "You are a concise technical instructor.",
+    "temperature": 0.2,
+    "provider": "ollama",
+    "maxTokens": 120
+  }'
+```
 
-Try:
+OpenAI:
+
+```bash
+curl -X POST \
+  http://localhost:5000/api/prompt \
+  -H "Content-Type: application/json" \
+  -d '{
+    "prompt": "Explain dependency injection in one paragraph.",
+    "systemPrompt": "You are a concise technical instructor.",
+    "temperature": 0.2,
+    "provider": "openai",
+    "maxTokens": 120
+  }'
+```
+
+Compare:
+
+```text
+response quality
+latency
+writing style
+instruction following
+response length
+```
+
+The goal is not to prove one provider is better. The goal is to see that the feature can remain stable while the provider implementation changes.
+
+## Run — Compare Output Limits
+
+Repeat a request first with a small output limit and then with a larger one. Also verify that requests without `maxTokens` still work.
+
+For example:
+
+```bash
+curl -X POST \
+  http://localhost:5000/api/prompt \
+  -H "Content-Type: application/json" \
+  -d '{
+    "prompt": "Explain the major differences between REST, GraphQL, and gRPC.",
+    "provider": "ollama",
+    "maxTokens": 40
+  }'
+```
+
+Then rerun with a larger value such as `400`.
+
+## Run — Compare Temperatures
+
+Run the same creative request several times at `0.0`, then at a higher value such as `1.0`.
+
+```bash
+curl -X POST \
+  http://localhost:5000/api/prompt \
+  -H "Content-Type: application/json" \
+  -d '{
+    "prompt": "Give me three names for a software consulting company.",
+    "provider": "ollama",
+    "temperature": 0.0
+  }'
+```
+
+Then change only `temperature` to `1.0` and compare the responses.
+
+## Run — Model Override
+
+Try another model supported by the selected provider without changing `appsettings.json`:
+
+```bash
+curl -X POST \
+  http://localhost:5000/api/prompt \
+  -H "Content-Type: application/json" \
+  -d '{
+    "prompt": "Explain dependency injection in one paragraph.",
+    "provider": "ollama",
+    "model": "qwen3:8b"
+  }'
+```
+
+Use a model that is actually installed for the selected provider.
+
+## Attack — Unsupported Provider
+
+```bash
+curl -i \
+  -X POST \
+  http://localhost:5000/api/prompt \
+  -H "Content-Type: application/json" \
+  -d '{
+    "prompt": "Hello",
+    "provider": "unknown"
+  }'
+```
+
+The factory should reject the request because only `ollama` and `openai` are supported.
+
+Also try:
 
 - `maxTokens = 1`;
-- a very large positive value;
-- an unsupported provider;
+- a very large positive `maxTokens` value;
 - the same prompt with low and high temperature.
 
-Record which behaviors are enforced by normal application validation and which remain probabilistic model behavior.
+Record which behaviors are deterministic application behavior and which remain probabilistic model behavior.
 
 ## Explain
 
 1. Why should `MaxTokens` exist once at the application boundary and be translated separately by each provider?
 2. Why doesn't a token limit guarantee a specific number of words?
 3. What part of the application changes if a third provider is added?
+4. Why can two providers produce different results while still honoring the same application-level request contract?
 
 ## Lab Completion Criteria
 
@@ -63,5 +171,7 @@ Record which behaviors are enforced by normal application validation and which r
 ✓ Ollama maps the control
 ✓ OpenAI maps the control
 ✓ omitted MaxTokens preserves normal behavior
-✓ existing provider selection and other controls still work
+✓ provider comparison remains possible through one application contract
+✓ temperature and model override experiments still work
+✓ unsupported providers are rejected
 ```

@@ -44,19 +44,123 @@ Complete the `Handler` / `IAiProvider` path so that:
 
 Do not move Ollama-specific SDK types into the feature layer.
 
-## Run — Verify the Result
+## Run — Exercise 1: Basic Question
 
-Verify `text`, `model`, and `duration`. Then run the same creative prompt several times and compare the responses:
+Try:
 
-```text
-Give me three names for a software consulting company.
+```bash
+curl -X POST \
+  http://localhost:5000/api/prompt \
+  -H "Content-Type: application/json" \
+  -d '{
+    "prompt": "What is the difference between a class and an interface in C#?"
+  }'
 ```
 
-## Attack — Provider Failure
+Verify that the response includes:
 
-Stop Ollama and call the endpoint again. Observe that the ASP.NET application can remain alive while its external model dependency is unavailable.
+```text
+text
+model
+duration
+```
 
-## Attack — Prove Cancellation Reaches the AI Provider
+## Run — Exercise 2: Ask for a Specific Format
+
+Prompt wording alone can influence the response format:
+
+```bash
+curl -X POST \
+  http://localhost:5000/api/prompt \
+  -H "Content-Type: application/json" \
+  -d '{
+    "prompt": "Explain dependency injection using exactly three bullet points."
+  }'
+```
+
+Observe whether the model follows the instruction.
+
+This is still ordinary natural-language prompting. The application has not added any structured-output enforcement.
+
+## Run — Exercise 3: Compare Two Runs
+
+Send the same request more than once:
+
+```bash
+curl -X POST \
+  http://localhost:5000/api/prompt \
+  -H "Content-Type: application/json" \
+  -d '{
+    "prompt": "Give me three names for a software consulting company."
+  }'
+```
+
+Compare the responses. Depending on the model and its defaults, the exact wording may vary.
+
+The important observation is that an LLM is not a deterministic function in the same sense as ordinary application code.
+
+## Run — Exercise 4: Observe Response Time
+
+Try a short request:
+
+```bash
+curl -X POST \
+  http://localhost:5000/api/prompt \
+  -H "Content-Type: application/json" \
+  -d '{
+    "prompt": "Answer with one word: what color is the sky on a clear day?"
+  }'
+```
+
+Then try a more substantial request:
+
+```bash
+curl -X POST \
+  http://localhost:5000/api/prompt \
+  -H "Content-Type: application/json" \
+  -d '{
+    "prompt": "Explain the differences between REST, GraphQL, and gRPC and give one business use case for each."
+  }'
+```
+
+Compare the `duration` values.
+
+Generation time can vary based on factors such as:
+
+- response length;
+- model size;
+- local hardware;
+- model warm-up state;
+- concurrent workload.
+
+`Duration` is therefore useful operational metadata, even in a teaching example.
+
+## Attack — Exercise 5: Stop Ollama
+
+Stop or otherwise make Ollama unavailable, then call the endpoint again:
+
+```bash
+curl -X POST \
+  http://localhost:5000/api/prompt \
+  -H "Content-Type: application/json" \
+  -d '{
+    "prompt": "What is the difference between a class and an interface in C#?"
+  }'
+```
+
+Observe that the ASP.NET application can remain alive while its external model dependency cannot produce a response.
+
+This reinforces the boundary:
+
+```text
+ASP.NET application
+    ↓
+external model runtime
+```
+
+Even though Ollama is running locally, it is still an external dependency from the application's perspective.
+
+## Attack — Exercise 6: Prove Cancellation Reaches the AI Provider
 
 Temporarily add this at the beginning of `OllamaProvider.SendAsync`:
 
@@ -64,9 +168,31 @@ Temporarily add this at the beginning of `OllamaProvider.SendAsync`:
 await Task.Delay(TimeSpan.FromSeconds(30), cancellationToken);
 ```
 
-Start a request and press `Ctrl-C` in the `curl` terminal after a few seconds. The delay should be cancelled because request cancellation flowed through the endpoint, handler, interface, and provider.
+Start a request:
 
-Then remove the artificial delay and ask Ollama for an intentionally long response. Cancel while the model is generating. The same token is passed to `ChatAsync`, so this exercises cancellation during the real provider operation.
+```bash
+curl -X POST \
+  http://localhost:5000/api/prompt \
+  -H "Content-Type: application/json" \
+  -d '{
+    "prompt": "Explain dependency injection in detail."
+  }'
+```
+
+Press `Ctrl-C` in the `curl` terminal after a few seconds. The delay should be cancelled because request cancellation flowed through the endpoint, handler, interface, and provider.
+
+Then remove the artificial delay and ask Ollama for an intentionally long response:
+
+```bash
+curl -X POST \
+  http://localhost:5000/api/prompt \
+  -H "Content-Type: application/json" \
+  -d '{
+    "prompt": "Write a very detailed explanation of the history of programming languages and the major ideas introduced by each generation."
+  }'
+```
+
+Cancel while the model is generating. The same token is passed to `ChatAsync`, so this exercises cancellation during the real provider operation.
 
 ## Explain
 
@@ -74,6 +200,7 @@ Then remove the artificial delay and ask Ollama for an intentionally long respon
 2. Why does a cancellation token have to be passed to each cancellable operation?
 3. Why is Ollama an external dependency even when it runs locally?
 4. Why should tests assert the application contract rather than one exact generated paragraph?
+5. Why does asking for exactly three bullet points influence the model without deterministically enforcing the format?
 
 ## Lab Completion Criteria
 
@@ -82,6 +209,8 @@ Then remove the artificial delay and ask Ollama for an intentionally long respon
 ✓ generated text is returned
 ✓ model and duration metadata are populated
 ✓ provider-specific code stays in Infrastructure/Ai
+✓ repeated prompts demonstrate probabilistic behavior
+✓ response duration can be observed
 ✓ provider failure is observable
 ✓ client cancellation can cancel work inside OllamaProvider
 ```

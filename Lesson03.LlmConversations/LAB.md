@@ -15,7 +15,9 @@ Implement the path that continues an existing conversation: load the conversatio
 
 ## Run the Starter
 
-Start a new conversation and save the returned `conversationId`. Then attempt a follow-up using that ID. The workshop starter intentionally leaves the continuation path incomplete.
+Use the start/continue curl examples in [README.md](README.md) to create a conversation and save the returned `conversationId`.
+
+Then attempt a follow-up using that ID. The workshop starter intentionally leaves the continuation path incomplete, so observe what fails before fixing it.
 
 ## Build — Continue a Conversation
 
@@ -28,22 +30,72 @@ Complete the existing-conversation path so that it:
 - uses the provider stored on the conversation;
 - persists both the user and assistant messages only after provider success.
 
-## Run — Prove Memory
+## Run — Conversation Memory
 
-Tell the model a fact in the first turn and ask for it later without repeating it. Also start one Ollama conversation and one OpenAI conversation and prove each retains its original provider.
+Tell the model a fact in the first turn, then ask for it in a later turn without repeating it.
 
-## Attack
+For example, start with:
 
-- Try changing provider on a later turn.
-- Try changing temperature on a later turn.
-- Use an unknown conversation ID.
-- Make the selected provider unavailable during a follow-up and verify a half-completed turn is not persisted.
+```text
+My favorite programming language is Java. Remember that for later.
+```
+
+Then continue the same conversation with:
+
+```text
+What programming language did I tell you I prefer?
+```
+
+The answer should depend on application-owned conversation history being sent back to the provider.
+
+## Run — Provider Persistence
+
+Start one conversation with:
+
+```text
+provider = "openai"
+```
+
+and another with:
+
+```text
+provider = "ollama"
+```
+
+Continue both conversations without supplying a provider on the later request.
+
+Each should continue using the provider selected when the conversation was created.
+
+## Attack — Immutable Settings
+
+Try changing provider or temperature on a later turn. Request validation should reject the attempt because these are conversation-level settings.
+
+Also try changing one of the other conversation-owned settings:
+
+```text
+SystemPrompt
+Model
+MaxTokens
+```
+
+The continuation request should not be allowed to silently change the conversation's configuration.
+
+## Attack — Unknown Conversation
+
+Send a continuation request with a made-up `conversationId` and verify that the application returns the expected not-found behavior.
+
+## Attack — Provider Failure
+
+Make the selected provider unavailable and send a message to an existing conversation.
+
+Verify that the failed turn is not persisted. When the provider becomes available again, the conversation should not contain a user message that never received a corresponding assistant response.
 
 ## Explain
 
 1. Why is conversation memory application state rather than provider state?
 2. Why are conversation-level model settings immutable after creation in this design?
 3. Why is "persist only after success" important?
+4. Why can two conversations in the same application safely use different providers?
 
 ## Lab Completion Criteria
 
@@ -51,6 +103,8 @@ Tell the model a fact in the first turn and ask for it later without repeating i
 ✓ existing conversations can be continued
 ✓ prior history reaches the selected provider
 ✓ provider selection remains fixed
+✓ conversation memory works across HTTP requests
 ✓ invalid setting changes are rejected
+✓ unknown conversation IDs are handled appropriately
 ✓ failed provider calls do not leave partial turns
 ```

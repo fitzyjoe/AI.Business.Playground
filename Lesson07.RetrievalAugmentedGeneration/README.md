@@ -276,12 +276,9 @@ Set `Rag.EmbeddingProvider` to `openai`, restart the application so the in-memor
 
 ---
 
-## Useful Experiments
+## Hands-On Lab
 
-- Search the knowledge endpoint directly for a procedure or policy question.
-- Ask a question requiring property data and compare MCP grounding with RAG grounding.
-- Run the same chat provider with each embedding provider and compare retrieved chunks.
-- Change `TopResults` and observe how much context is supplied.
+The learner-directed direct-search, MCP-vs-RAG, embedding-provider, `TopResults`, new-knowledge, and untrusted-retrieval experiments are in [LAB.md](LAB.md).
 
 ---
 

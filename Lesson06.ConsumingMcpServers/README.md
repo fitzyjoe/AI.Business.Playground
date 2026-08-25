@@ -241,53 +241,9 @@ curl -X POST http://localhost:5000/api/message \
 
 ---
 
-## Useful Scenarios
+## Hands-On Lab
 
-### No Tool Needed
-
-Ask:
-
-```text
-What does assessed value mean?
-```
-
-The model should be able to answer without a property lookup.
-
-### Exact Parcel Lookup
-
-Ask:
-
-```text
-What is the assessed value of parcel 0304-12-0042?
-```
-
-The selected provider can call `lookup_property_by_parcel` and answer from Lesson05 data.
-
-### Owner Search
-
-Ask:
-
-```text
-What properties are owned by ABC Commercial Holdings?
-```
-
-The provider can select `search_properties_by_owner`.
-
-### Property Not Found
-
-Ask for a nonexistent parcel and verify that the answer does not invent property data.
-
-### Tool Validation Error
-
-Ask for more results than Lesson05 permits. The tool can return its deterministic validation error to the model.
-
-### Multi-Turn Conversation
-
-Start a conversation with either provider, then use the returned `conversationId` for a follow-up such as:
-
-```text
-What other properties do they own?
-```
+The learner-directed no-tool, parcel lookup, owner search, missing-property, validation-error, address-tool, multi-turn, and provider-comparison scenarios are in [LAB.md](LAB.md).
 
 ---
 

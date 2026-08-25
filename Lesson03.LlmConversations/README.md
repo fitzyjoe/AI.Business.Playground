@@ -276,25 +276,9 @@ Lesson03.LlmConversations/
 
 ---
 
-## Useful Exercises
+## Hands-On Lab
 
-### Provider Persistence
-
-Start one conversation with `provider = "openai"` and another with `provider = "ollama"`. Continue both without supplying a provider.
-
-Each should continue using its original provider.
-
-### Conversation Memory
-
-Tell the model a fact in the first turn, then ask for it in a later turn.
-
-### Immutable Settings
-
-Try changing provider or temperature on a later turn. Expect request validation to reject it.
-
-### Provider Failure
-
-Make the selected provider unavailable and send a message to an existing conversation. Verify that the failed turn is not persisted.
+The learner-directed conversation-memory, provider-persistence, immutable-settings, unknown-conversation, and provider-failure exercises are in [LAB.md](LAB.md).
 
 ---
 

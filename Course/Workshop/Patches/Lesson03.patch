@@ -1,0 +1,18 @@
+diff --git a/Lesson03.LlmConversations/Features/Conversations/MessageHandler.cs b/Lesson03.LlmConversations/Features/Conversations/MessageHandler.cs
+--- a/Lesson03.LlmConversations/Features/Conversations/MessageHandler.cs
++++ b/Lesson03.LlmConversations/Features/Conversations/MessageHandler.cs
+@@ -12,12 +12,8 @@ public sealed class MessageHandler(
+ 		
+ 		if (messageRequest.ConversationId.HasValue)
+ 		{
+-			conversation =
+-				await _conversationRepository.GetAsync(
+-					messageRequest.ConversationId.Value,
+-					cancellationToken)
+-				?? throw new ConversationNotFoundException(
+-					messageRequest.ConversationId.Value);
++			throw new NotImplementedException(
++				"WORKSHOP: load and continue an existing conversation.");
+ 		}
+ 		else
+ 		{

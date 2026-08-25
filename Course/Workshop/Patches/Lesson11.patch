@@ -1,0 +1,10 @@
+diff --git a/Lesson11.ProductionAiPlatform/Infrastructure/Ai/AiOptions.cs b/Lesson11.ProductionAiPlatform/Infrastructure/Ai/AiOptions.cs
+--- a/Lesson11.ProductionAiPlatform/Infrastructure/Ai/AiOptions.cs
++++ b/Lesson11.ProductionAiPlatform/Infrastructure/Ai/AiOptions.cs
+@@ -21,4 +21,6 @@ public sealed class AiOptions
+ 	public int ProviderCallTimeoutSeconds { get; init; } = 45;
+ 
+ 	public int MaxConcurrentCallsPerProvider { get; init; } = 4;
++
++	// WORKSHOP TODO: add MaxConversationTurns and enforce it as application policy.
+ }

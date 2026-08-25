@@ -1,0 +1,12 @@
+diff --git a/Lesson05.McpFundamentals/Features/Properties/PropertyTools.cs b/Lesson05.McpFundamentals/Features/Properties/PropertyTools.cs
+--- a/Lesson05.McpFundamentals/Features/Properties/PropertyTools.cs
++++ b/Lesson05.McpFundamentals/Features/Properties/PropertyTools.cs
+@@ -8,6 +8,8 @@ namespace Lesson05.McpFundamentals.Features.Properties;
+ [McpServerToolType]
+ public sealed class PropertyTools(IPropertyRepository _propertyRepository)
+ {
++    // WORKSHOP TODO: add a read-only search_properties_by_address MCP tool.
++
+     [McpServerTool(
+         Name = "lookup_property_by_parcel",
+         Title = "Lookup Property by Parcel",

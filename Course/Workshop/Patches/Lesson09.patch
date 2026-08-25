@@ -1,0 +1,12 @@
+diff --git a/Lesson09.Agents/Features/Agents/PropertyReviewAgent.cs b/Lesson09.Agents/Features/Agents/PropertyReviewAgent.cs
+--- a/Lesson09.Agents/Features/Agents/PropertyReviewAgent.cs
++++ b/Lesson09.Agents/Features/Agents/PropertyReviewAgent.cs
+@@ -48,6 +48,8 @@ public sealed class PropertyReviewAgent
+ 		_aiProviderFactory = aiProviderFactory;
+ 		_loggerFactory = loggerFactory;
+ 
++		// WORKSHOP TODO: add a bounded summarize_property_review_status agent tool.
++
+ 		var searchKnowledgeTool = AIFunctionFactory.Create(
+ 			knowledgeTools.SearchInternalKnowledgeAsync,
+ 			name: "search_internal_knowledge");

@@ -1,0 +1,17 @@
+diff --git a/Lesson06.ConsumingMcpServers/Infrastructure/Mcp/PropertyMcpClient.cs b/Lesson06.ConsumingMcpServers/Infrastructure/Mcp/PropertyMcpClient.cs
+--- a/Lesson06.ConsumingMcpServers/Infrastructure/Mcp/PropertyMcpClient.cs
++++ b/Lesson06.ConsumingMcpServers/Infrastructure/Mcp/PropertyMcpClient.cs
+@@ -43,11 +43,8 @@ public sealed class PropertyMcpClient : IAsyncDisposable
+ 			transport,
+ 			cancellationToken: cancellationToken);
+ 
+-		Tools =
+-		[
+-			.. await _client.ListToolsAsync(
+-				cancellationToken: cancellationToken)
+-		];
++		// WORKSHOP TODO: discover the MCP server's tools and expose them to the chat client.
++		Tools = [];
+ 	}
+ 
+ 	public async ValueTask DisposeAsync()

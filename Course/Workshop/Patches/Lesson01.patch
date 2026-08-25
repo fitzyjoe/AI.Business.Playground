@@ -1,0 +1,42 @@
+diff --git a/Lesson01.BasicPrompting/Features/Models/Execute/Handler.cs b/Lesson01.BasicPrompting/Features/Models/Execute/Handler.cs
+--- a/Lesson01.BasicPrompting/Features/Models/Execute/Handler.cs
++++ b/Lesson01.BasicPrompting/Features/Models/Execute/Handler.cs
+@@ -6,7 +6,6 @@ public sealed class Handler(IAiProvider aiProvider)
+ {
+ 	public async Task<AiResponse> Handle(AiRequest aiRequest, CancellationToken cancellationToken)
+ 	{
+-		var aiAiResponse = await aiProvider.SendAsync(aiRequest, cancellationToken);
+-		return aiAiResponse;
++		throw new NotImplementedException("WORKSHOP: delegate the request through IAiProvider.");
+ 	}
+ }
+diff --git a/Lesson01.BasicPrompting/Infrastructure/Ai/Providers/OllamaProvider.cs b/Lesson01.BasicPrompting/Infrastructure/Ai/Providers/OllamaProvider.cs
+--- a/Lesson01.BasicPrompting/Infrastructure/Ai/Providers/OllamaProvider.cs
++++ b/Lesson01.BasicPrompting/Infrastructure/Ai/Providers/OllamaProvider.cs
+@@ -23,24 +23,7 @@ public sealed class OllamaProvider : IAiProvider
+ 		AiRequest aiRequest,
+ 		CancellationToken cancellationToken = default)
+ 	{
+-		var sb = new StringBuilder();
+-		var chatRequest = new ChatRequest
+-		{
+-			Messages = [new Message { Role = ChatRole.User, Content = aiRequest.Prompt }]
+-		};
+-		
+-		var startTime = DateTime.Now;
+-
+-		await foreach (var response in _ollama.ChatAsync(chatRequest, cancellationToken))
+-		{
+-			if (response?.Message?.Content != null)
+-			{
+-				sb.Append(response.Message.Content);
+-			}
+-		}
+-		
+-		var endTime = DateTime.Now;
+-
+-		return new AiResponse(sb.ToString(), _ollama.SelectedModel, endTime.Subtract(startTime));
++		await Task.Yield();
++		throw new NotImplementedException("WORKSHOP: send the prompt to Ollama and build AiResponse.");
+ 	}
+ }

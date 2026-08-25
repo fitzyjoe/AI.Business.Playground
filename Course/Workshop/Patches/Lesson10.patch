@@ -1,0 +1,12 @@
+diff --git a/Lesson10.MonitoringAndAnomalyDetection/Features/Monitoring/MonitoringDataSource.cs b/Lesson10.MonitoringAndAnomalyDetection/Features/Monitoring/MonitoringDataSource.cs
+--- a/Lesson10.MonitoringAndAnomalyDetection/Features/Monitoring/MonitoringDataSource.cs
++++ b/Lesson10.MonitoringAndAnomalyDetection/Features/Monitoring/MonitoringDataSource.cs
+@@ -30,6 +30,8 @@ public sealed class MonitoringDataSource
+     {
+         var now = DateTimeOffset.UtcNow;
+ 
++        // WORKSHOP TODO: add failed_document_percent with normal and anomalous scenarios.
++
+         _observations = new Dictionary<string, IReadOnlyList<MetricObservation>>(StringComparer.OrdinalIgnoreCase)
+         {
+             ["documents_processed"] = BuildSeries("documents_processed", now, ObservationCount, 1005, 20, 412),

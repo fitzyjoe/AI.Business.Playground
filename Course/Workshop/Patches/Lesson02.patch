@@ -1,0 +1,42 @@
+diff --git a/Lesson02.ControllingLlmBehavior/Features/Models/Execute/AiRequest.cs b/Lesson02.ControllingLlmBehavior/Features/Models/Execute/AiRequest.cs
+--- a/Lesson02.ControllingLlmBehavior/Features/Models/Execute/AiRequest.cs
++++ b/Lesson02.ControllingLlmBehavior/Features/Models/Execute/AiRequest.cs
+@@ -11,6 +11,6 @@ public sealed class AiRequest
+ 	public string Provider { get; init; } = "ollama";
+ 	
+ 	public string? Model { get; init; }
+-
+-	public int? MaxTokens { get; init; }
++
++	// WORKSHOP TODO: add a provider-neutral MaxTokens request control.
+ }
+diff --git a/Lesson02.ControllingLlmBehavior/Infrastructure/Ai/Providers/OllamaProvider.cs b/Lesson02.ControllingLlmBehavior/Infrastructure/Ai/Providers/OllamaProvider.cs
+--- a/Lesson02.ControllingLlmBehavior/Infrastructure/Ai/Providers/OllamaProvider.cs
++++ b/Lesson02.ControllingLlmBehavior/Infrastructure/Ai/Providers/OllamaProvider.cs
+@@ -31,11 +31,7 @@ public sealed class OllamaProvider : IAiProvider
+ 		{
+ 			Temperature = aiRequest.Temperature
+ 		};
+-		
+-		if (aiRequest.MaxTokens.HasValue)
+-		{
+-			options.NumPredict = aiRequest.MaxTokens.Value;
+-		}
++		// WORKSHOP TODO: map MaxTokens to Ollama RequestOptions.NumPredict.
+ 		
+ 		var chatRequest = new ChatRequest
+ 		{
+diff --git a/Lesson02.ControllingLlmBehavior/Infrastructure/Ai/Providers/OpenAiProvider.cs b/Lesson02.ControllingLlmBehavior/Infrastructure/Ai/Providers/OpenAiProvider.cs
+--- a/Lesson02.ControllingLlmBehavior/Infrastructure/Ai/Providers/OpenAiProvider.cs
++++ b/Lesson02.ControllingLlmBehavior/Infrastructure/Ai/Providers/OpenAiProvider.cs
+@@ -31,8 +31,8 @@ public sealed class OpenAiProvider(IOptions<OpenAiOptions> options) : IAiProvider
+ 
+ 		var chatOptions = new ChatOptions
+ 		{
+-			Temperature = aiRequest.Temperature,
+-			MaxOutputTokens = aiRequest.MaxTokens
++			Temperature = aiRequest.Temperature
++			// WORKSHOP TODO: map MaxTokens to MaxOutputTokens.
+ 		};
+ 
+ 		var stopwatch = Stopwatch.StartNew();

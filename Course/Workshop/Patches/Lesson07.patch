@@ -1,0 +1,12 @@
+diff --git a/Lesson07.RetrievalAugmentedGeneration/Features/Knowledge/KnowledgeRetriever.cs b/Lesson07.RetrievalAugmentedGeneration/Features/Knowledge/KnowledgeRetriever.cs
+--- a/Lesson07.RetrievalAugmentedGeneration/Features/Knowledge/KnowledgeRetriever.cs
++++ b/Lesson07.RetrievalAugmentedGeneration/Features/Knowledge/KnowledgeRetriever.cs
+@@ -42,6 +42,8 @@ public sealed class KnowledgeRetriever(
+ 
+         var knowledgePath = Path.Combine(_environment.ContentRootPath, "Knowledge");
+ 
++        // WORKSHOP TODO: add a new company knowledge document and tune retrieval for it.
++
+         foreach (var path in Directory.GetFiles(knowledgePath, "*.md"))
+         {
+             var text = await File.ReadAllTextAsync(path, cancellationToken);

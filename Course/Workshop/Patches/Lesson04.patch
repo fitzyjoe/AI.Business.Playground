@@ -1,0 +1,12 @@
+diff --git a/Lesson04.StructuredOutputs/Features/Correspondence/CorrespondenceAnalysis.cs b/Lesson04.StructuredOutputs/Features/Correspondence/CorrespondenceAnalysis.cs
+--- a/Lesson04.StructuredOutputs/Features/Correspondence/CorrespondenceAnalysis.cs
++++ b/Lesson04.StructuredOutputs/Features/Correspondence/CorrespondenceAnalysis.cs
+@@ -12,6 +12,8 @@ public sealed record CorrespondenceAnalysis
+ 	public required HearingScheduleDetails? HearingSchedule { get; init; }
+ 
+ 	public required ValueNoticeDetails? ValueNotice { get; init; }
++
++	// WORKSHOP TODO: add TaxDelinquencyNotice details and deterministic validation.
+ 	
+ 	public CorrespondenceAnalysis NormalizeAndValidate()
+ 	{

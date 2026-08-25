@@ -1,0 +1,35 @@
+diff --git a/Lesson08.SafeWriteOperations/Features/PropertyReviews/PropertyReviewService.cs b/Lesson08.SafeWriteOperations/Features/PropertyReviews/PropertyReviewService.cs
+--- a/Lesson08.SafeWriteOperations/Features/PropertyReviews/PropertyReviewService.cs
++++ b/Lesson08.SafeWriteOperations/Features/PropertyReviews/PropertyReviewService.cs
+@@ -88,29 +88,8 @@ public sealed class PropertyReviewService(
+ 
+     public PendingPropertyReview Reject(Guid id)
+     {
+-        lock (_executionLock)
+-        {
+-            var pendingPropertyReview = _pendingRepository.Get(id) ?? throw new KeyNotFoundException($"Pending property review '{id}' was not found.");
+-
+-            if (pendingPropertyReview.Status == PendingPropertyReviewStatus.Executed)
+-            {
+-                throw new InvalidOperationException("An executed property review cannot be rejected.");
+-            }
+-
+-            // Making rejection idempotent is convenient.
+-            if (pendingPropertyReview.Status == PendingPropertyReviewStatus.Rejected)
+-            {
+-                return pendingPropertyReview;
+-            }
+-
+-            pendingPropertyReview.Status = PendingPropertyReviewStatus.Rejected;
+-
+-            pendingPropertyReview.RejectedAt = DateTimeOffset.UtcNow;
+-
+-            _pendingRepository.Update(pendingPropertyReview);
+-
+-            return pendingPropertyReview;
+-        }
++        throw new NotImplementedException(
++            "WORKSHOP: implement deterministic, idempotent rejection lifecycle behavior.");
+     }
+ 
+     private PropertyReview GetExecutedReview(PendingPropertyReview pendingPropertyReview)

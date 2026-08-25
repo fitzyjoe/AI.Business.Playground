@@ -49,8 +49,9 @@ By the end of Lesson01, you should understand:
 This lesson assumes:
 
 - .NET 10 is installed;
-- Ollama is installed and running locally;
-- the model configured in `appsettings.json` is available in Ollama.
+- Ollama is installed and running locally with one or more models like gemma3:4b;
+- the model configured in `appsettings.json` is available in Ollama;
+- It might be helpful but not required to have commands `jq` and `sed` installed;
 
 The current configuration uses:
 
@@ -73,6 +74,73 @@ If the configured model is missing, pull it before running the lesson:
 
 ```bash
 ollama pull gemma3:4b
+```
+
+It may be helpful to understand how to modify the curl command or pipe the output to other commands.  First consider a base example:
+
+```bash
+curl -X POST \
+  http://localhost:5000/api/prompt \
+  -H "Content-Type: application/json" \
+  -d '{"prompt": "Show me a table of radio frequencies that are considered AM or FM. Please include a column for frequency band in mhz and a second column showing the range name. I only want the two column table without other supporting text."}'
+  
+  {"text":"| Frequency (MHz) | Range Name        |\n|-----------------|--------------------|\n| 530 - 570       | Mediumwave AM      |\n| 610 - 690       | Mediumwave AM      |\n| 740 - 760       | Shortwave AM       |\n| 87.5 - 92.5     | FM (Standard)       |\n| 94.1 - 99.9     | FM (HD Radio)       |\n| 101.9 - 103.9   | FM (Various)        |\n| 107.9 - 108.3   | FM (Santa Monica)    |\n| 109.9 - 111.9   | FM (Various)        |\n\n\n**Note:** *These ranges are approximate and can vary slightly based on location due to regulatory changes and local station assignments.*","model":"gemma3:4b","duration":"00:00:05.2711090"}
+```
+
+**jq**. You can use jq to pretty print the JSON that is returned from the curl command
+
+```bash
+curl -X POST \
+  http://localhost:5000/api/prompt \
+  -H "Content-Type: application/json" \
+  -d '{"prompt": "Show me a table of radio frequencies that are considered AM or FM. Please include a column for frequency band in mhz and a second column showing the range name. I only want the two column table without other supporting text."}' \
+| jq .
+
+{
+  "text": "| Frequency (MHz) | Range Name        |\n|-----------------|--------------------|\n| 530-570         | Mediumwave AM      |\n| 610-690         | Mediumwave AM      |\n| 740-760         | Shortwave AM       |\n| 87.5-92.5        | FM Local           |\n| 94.1-99.9        | FM Top 40          |\n| 95.5-96.5        | FM Adult Contemporary |\n| 103.9-104.7      | FM Sports          |\n| 105.1-107.9      | FM News/Talk        |\n| 107.5-108.1      | FM Gospel          |\n| 109.9-112.3      | FM Latin           |\n| 1490-1540        | Shortwave AM       |\n| 1620-1710        | Shortwave AM       |\n| 88-98            | FM HD Radio          |\n\n",
+  "model": "gemma3:4b",
+  "duration": "00:00:06.7653550"
+}
+```
+
+**sed**.  I use sed to translate the newline "\n" into an actual newline
+
+```bash
+curl -X POST \
+  http://localhost:5000/api/prompt \
+  -H "Content-Type: application/json" \
+  -d '{"prompt": "Show me a table of radio frequencies that are considered AM or FM. Please include a column for frequency band in mhz and a second column showing the range name. I only want the two column table without other supporting text."}' \
+| sed 's/\\n/\n/g'
+
+{"text":"| Frequency (MHz) | Range Name        |
+|-----------------|--------------------|
+| 530 - 570       | Mediumwave         |
+| 610 - 690       | Mediumwave         |
+| 750 - 870       | Longwave           |
+| 87.5 - 90.7     | FM (Narrowcast)    |
+| 88 - 92.3       | FM                 |
+| 101.1 - 102.9   | FM                 |
+| 104.1 - 107.9   | FM                 |
+| 108 - 111        | FM (Narrowcast)    |
+| 108.1 - 108.3   | FM (Narrowcast)    |
+| 109.9 - 112.2   | FM                 |
+| 149 - 169       | FM (Transportation) |
+| 171.9 - 174     | FM (Public Safety)  |
+| 87.5 - 108.0    | Regional/Local FM   |
+","model":"gemma3:4b","duration":"00:00:07.1476610"}
+```
+
+`-w "\nHTTP Status: %{http_code}\n"` you can use this to see the http response code which can be helpful for troubleshooting
+
+```bash
+curl -X POST \
+  http://localhost:5000/api/prompt \
+  -H "Content-Type: application/json" \
+  -d '{"prompt": "Show me a table of radio frequencies that are considered AM or FM. Please include a column for frequency band in mhz and a second column showing the range name. I only want the two column table without other supporting text."}' \
+  -w "\nHTTP Status: %{http_code}\n" 
+  
+{"text":"| Frequency (MHz) | Range Name          |\n|-----------------|----------------------|\n| 530 - 570        | Mediumwave           |\n| 620 - 680        | Mediumwave           |\n| 750 - 910        | Mediumwave           |\n| 87.5 - 89.1      | FM (N)               |\n| 94.1 - 96.9      | FM (W)               |\n| 103.9 - 105.5    | FM (E)               |\n| 107.9 - 108.1    | FM (P)               |\n| 109.9 - 112.4    | FM (K)               |\n| 123.9 - 134.0    | FM (C)               |\n| 149.7 - 153.5    | FM (M)               |\n| 162.3 - 173.8    | FM (H)               |\n| 174.1 - 176.0    | FM (S)               |\n| 194.1 - 200.5    | FM (A)               |\n| 88.1 - 89.1      | FM (N)               |\n| 94.1 - 96.9      | FM (W)               |\n| 103.9 - 105.5    | FM (E)               |\n| 107.9 - 108.1    | FM (P)               |\n| 109.9 - 112.4    | FM (K)               |\n| 123.9 - 134.0    | FM (C)               |\n| 149.7 - 153.5    | FM (M)               |\n| 162.3 - 173.8    | FM (H)               |\n| 174.1 - 176.0    | FM (S)               |\n| 194.1 - 200.5    | FM (A)               |","model":"gemma3:4b","duration":"00:00:12.3543630"}
+HTTP Status: 200
 ```
 
 ---
@@ -230,6 +298,8 @@ HTTP 200
 
 ## Endpoint
 
+We will move to a more traditional `Controller` approach in a future lesson, but for now we are keeping this super simple.
+
 `Endpoint.cs` defines the HTTP boundary using a minimal API endpoint.
 
 Conceptually:
@@ -366,7 +436,7 @@ User message
 SelectedModel
 ```
 
-No system message is added in this lesson.
+**No system message is added in this lesson.**
 
 ---
 
@@ -429,6 +499,8 @@ If the HTTP client disconnects or the request is cancelled, the model call can a
 This is a small implementation detail with an important production principle:
 
 > Long-running AI calls should participate in normal application cancellation behavior.
+
+You could wrap the call in a try-catch and catch `OperationCanceledException` and `ctrl-c` after issuing a complex model request to prove that the cancellation is working.
 
 ---
 

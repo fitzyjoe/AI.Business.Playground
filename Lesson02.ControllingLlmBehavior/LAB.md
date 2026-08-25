@@ -8,7 +8,7 @@ Add one request-level control, `MaxTokens`, all the way through the application 
 
 ## Predict
 
-1. Which project type should own the provider-neutral concept of a maximum output size?
+1. Which layer should own the provider-neutral concept of a maximum output size, and which layer should translate it into provider-specific settings?
 2. Where should Ollama-specific and OpenAI-specific mappings live?
 3. What should happen when `MaxTokens` is omitted?
 4. Why is a token limit a control rather than a guarantee about exact response length?

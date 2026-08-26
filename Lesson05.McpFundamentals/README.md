@@ -43,7 +43,11 @@ PropertyTools
 IPropertyRepository
       ↓
 InMemoryPropertyRepository
+      ↓
+properties.json (loaded once)
 ```
+
+The repository reads the JSON sample data when the singleton repository is first constructed and keeps the deserialized records in memory. Individual MCP tool calls do not reread the file.
 
 The MCP Inspector acts as the client while developing and testing the server.
 
@@ -175,14 +179,12 @@ Lesson05.McpFundamentals/
 ├── Features/
 │   └── Properties/
 │       ├── IPropertyRepository.cs
+│       ├── InMemoryPropertyRepository.cs
 │       ├── PropertyLookupResult.cs
 │       ├── PropertyRecord.cs
 │       ├── PropertySearchResult.cs
-│       └── PropertyTools.cs
-│
-├── Infrastructure/
-│   └── Properties/
-│       └── InMemoryPropertyRepository.cs
+│       ├── PropertyTools.cs
+│       └── properties.json
 │
 ├── Program.cs
 ├── README.md
@@ -200,6 +202,24 @@ This means the storage implementation could later be replaced by:
 
 The MCP tool contract would not need to change.
 
+## Sample Property Data
+
+`Features/Properties/properties.json` contains 50 synthetic commercial-property records used by this lesson and by the later lessons that launch the Lesson05 MCP server.
+
+The original example records remain in the file, including:
+
+```text
+0304-12-0042
+0304-12-0043
+0752-03-0188
+```
+
+Additional records provide repeated owners and repeated street names so search tools have useful multi-result cases. For example, `Reston Tech Holdings LLC` owns five sample properties on `Innovation Drive`.
+
+`Lesson05.McpFundamentals.csproj` copies the JSON file into the build and publish output while preserving its relative path. `InMemoryPropertyRepository` resolves the file from `AppContext.BaseDirectory`, rather than assuming that the process was started from a particular working directory.
+
+The repository is still appropriately called "in-memory" because the JSON file is only the seed data source. Once loaded, parcel and owner searches operate against the in-memory collection.
+
 ## Running the Server
 
 Build the project:
@@ -212,6 +232,12 @@ The compiled executable will be located under:
 
 ```text
 bin/Debug/net10.0/
+```
+
+The copied property data is located under:
+
+```text
+bin/Debug/net10.0/Features/Properties/properties.json
 ```
 
 The MCP server uses **standard input/output transport**.
@@ -239,7 +265,7 @@ npx @modelcontextprotocol/inspector \
   "./bin/Debug/net10.0/Lesson05.McpFundamentals"
 ```
 
-If you modify the C# project, remember:
+If you modify the C# project or `properties.json`, remember:
 
 ```bash
 dotnet build
@@ -247,7 +273,7 @@ dotnet build
 
 Then disconnect and reconnect the Inspector.
 
-The Inspector launches the compiled executable. It does not automatically rebuild the project when source files change.
+The Inspector launches the compiled executable. It does not automatically rebuild the project or recopy changed sample data.
 
 ## Inspecting Tool Definitions
 
@@ -433,7 +459,7 @@ builder.Services.AddSingleton<
     InMemoryPropertyRepository>();
 ```
 
-The MCP SDK creates the tool class and resolves its dependencies from the service container.
+The first time the singleton repository is constructed, it loads `properties.json`. The MCP SDK creates the tool class and resolves its dependencies from the service container.
 
 This keeps MCP concerns separate from business and data-access concerns.
 

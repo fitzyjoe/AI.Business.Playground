@@ -2,15 +2,6 @@
 
 A progressive set of C#/.NET lessons for building business applications with LLMs. The course starts with a single prompt and builds toward conversations, structured outputs, MCP, RAG, safe writes, agents, anomaly investigation, and production controls.
 
-## How to Use the Lessons
-
-Each lesson now has two complementary documents:
-
-- **`README.md`** — architecture, design rationale, implementation details, configuration, and reference examples for the completed solution.
-- **`LAB.md`** — the guided hands-on exercise. Labs use the sequence **Predict → Run → Build → Attack → Explain** and include a focused coding assignment.
-
-The completed projects in this repository are the answer/reference implementations. The workshop generator under `Course/Workshop` can produce starter versions by copying a selected set of lessons and applying their starter patches.
-
 ## Lesson Progression
 
 | Lesson | Topic | Coding challenge |
@@ -27,6 +18,9 @@ The completed projects in this repository are the answer/reference implementatio
 | 10 | Monitoring and Anomaly Detection | Add a new metric/anomaly scenario that triggers bounded AI investigation. |
 | 11 | Production AI Platform | Add `MaxConversationTurns`, a deterministic test, and a live AI evaluation. |
 
-## Suggested Delivery
+## How to Use the Lessons
 
-Release one or two labs at a time rather than assigning the full course at once. The README remains available as reference, but the LAB is the primary learner activity. The completed source can be treated as an answer key after a learner has made a reasonable attempt.
+Each lesson now has two complementary documents:
+
+- **`README.md`** — architecture, design rationale, implementation details, configuration, and reference examples for the completed solution.
+- **`LAB.md`** — the guided hands-on exercise. Labs use the sequence **Predict → Run → Build → Attack → Explain** and include a focused coding assignment.

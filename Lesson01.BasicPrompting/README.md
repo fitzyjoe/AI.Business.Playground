@@ -270,30 +270,6 @@ curl -X POST \
   }'
 ```
 
-A successful request follows this path:
-
-```text
-curl
- ↓
-POST /api/prompt
- ↓
-AiRequest
- ↓
-Handler
- ↓
-IAiProvider.SendAsync(...)
- ↓
-OllamaProvider
- ↓
-Ollama
- ↓
-model response
- ↓
-AiResponse
- ↓
-HTTP 200
-```
-
 ---
 
 ## Endpoint

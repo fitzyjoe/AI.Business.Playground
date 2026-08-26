@@ -206,7 +206,7 @@ The MCP tool contract would not need to change.
 
 `Features/Properties/properties.json` contains 50 synthetic commercial-property records used by this lesson and by the later lessons that launch the Lesson05 MCP server.
 
-The original example records remain in the file, including:
+Some example parcel numbers include the following:
 
 ```text
 0304-12-0042

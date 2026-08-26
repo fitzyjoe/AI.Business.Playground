@@ -65,7 +65,6 @@ Try blank input, a huge requested result count, and an address that does not exi
 1. Why did adding an MCP capability not require modifying an LLM?
 2. What is the difference between a normal C# method and an MCP tool contract?
 3. Why is `not found` usually a business result rather than a protocol failure?
-4. Why can the repository still be called `InMemoryPropertyRepository` even though its initial records come from a JSON file?
 
 ## Lab Completion Criteria
 

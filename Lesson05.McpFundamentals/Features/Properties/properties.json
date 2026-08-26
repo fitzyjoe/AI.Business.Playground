@@ -1,0 +1,402 @@
+[
+  {
+    "parcelNumber": "0304-12-0042",
+    "ownerName": "ABC Commercial Holdings LLC",
+    "propertyAddress": "1200 Main Street, McLean, VA 22101",
+    "jurisdiction": "Fairfax County, Virginia",
+    "taxYear": 2026,
+    "assessedValue": 8450000
+  },
+  {
+    "parcelNumber": "0304-12-0043",
+    "ownerName": "ABC Commercial Holdings LLC",
+    "propertyAddress": "1210 Main Street, McLean, VA 22101",
+    "jurisdiction": "Fairfax County, Virginia",
+    "taxYear": 2026,
+    "assessedValue": 5275000
+  },
+  {
+    "parcelNumber": "0752-03-0188",
+    "ownerName": "Potomac Office Partners LP",
+    "propertyAddress": "8500 Greensboro Drive, McLean, VA 22102",
+    "jurisdiction": "Fairfax County, Virginia",
+    "taxYear": 2026,
+    "assessedValue": 21900000
+  },
+  {
+    "parcelNumber": "0163-04-0101",
+    "ownerName": "Tysons Gateway Properties LLC",
+    "propertyAddress": "1750 Tysons Boulevard, McLean, VA 22102",
+    "jurisdiction": "Fairfax County, Virginia",
+    "taxYear": 2026,
+    "assessedValue": 28750000
+  },
+  {
+    "parcelNumber": "0163-04-0102",
+    "ownerName": "Tysons Gateway Properties LLC",
+    "propertyAddress": "1760 Tysons Boulevard, McLean, VA 22102",
+    "jurisdiction": "Fairfax County, Virginia",
+    "taxYear": 2026,
+    "assessedValue": 19400000
+  },
+  {
+    "parcelNumber": "0163-04-0103",
+    "ownerName": "Tysons Gateway Properties LLC",
+    "propertyAddress": "1770 Tysons Boulevard, McLean, VA 22102",
+    "jurisdiction": "Fairfax County, Virginia",
+    "taxYear": 2026,
+    "assessedValue": 22650000
+  },
+  {
+    "parcelNumber": "0184-09-0210",
+    "ownerName": "Capital Retail Ventures LLC",
+    "propertyAddress": "8100 Leesburg Pike, Vienna, VA 22182",
+    "jurisdiction": "Fairfax County, Virginia",
+    "taxYear": 2026,
+    "assessedValue": 12350000
+  },
+  {
+    "parcelNumber": "0184-09-0211",
+    "ownerName": "Capital Retail Ventures LLC",
+    "propertyAddress": "8120 Leesburg Pike, Vienna, VA 22182",
+    "jurisdiction": "Fairfax County, Virginia",
+    "taxYear": 2026,
+    "assessedValue": 9780000
+  },
+  {
+    "parcelNumber": "0184-09-0212",
+    "ownerName": "Capital Retail Ventures LLC",
+    "propertyAddress": "8140 Leesburg Pike, Vienna, VA 22182",
+    "jurisdiction": "Fairfax County, Virginia",
+    "taxYear": 2026,
+    "assessedValue": 11450000
+  },
+  {
+    "parcelNumber": "0184-09-0213",
+    "ownerName": "Capital Retail Ventures LLC",
+    "propertyAddress": "8160 Leesburg Pike, Vienna, VA 22182",
+    "jurisdiction": "Fairfax County, Virginia",
+    "taxYear": 2026,
+    "assessedValue": 8650000
+  },
+  {
+    "parcelNumber": "0272-11-0301",
+    "ownerName": "Reston Tech Holdings LLC",
+    "propertyAddress": "1100 Innovation Drive, Reston, VA 20190",
+    "jurisdiction": "Fairfax County, Virginia",
+    "taxYear": 2026,
+    "assessedValue": 16750000
+  },
+  {
+    "parcelNumber": "0272-11-0302",
+    "ownerName": "Reston Tech Holdings LLC",
+    "propertyAddress": "1110 Innovation Drive, Reston, VA 20190",
+    "jurisdiction": "Fairfax County, Virginia",
+    "taxYear": 2026,
+    "assessedValue": 18100000
+  },
+  {
+    "parcelNumber": "0272-11-0303",
+    "ownerName": "Reston Tech Holdings LLC",
+    "propertyAddress": "1120 Innovation Drive, Reston, VA 20190",
+    "jurisdiction": "Fairfax County, Virginia",
+    "taxYear": 2026,
+    "assessedValue": 15950000
+  },
+  {
+    "parcelNumber": "0272-11-0304",
+    "ownerName": "Reston Tech Holdings LLC",
+    "propertyAddress": "1130 Innovation Drive, Reston, VA 20190",
+    "jurisdiction": "Fairfax County, Virginia",
+    "taxYear": 2026,
+    "assessedValue": 20300000
+  },
+  {
+    "parcelNumber": "0272-11-0305",
+    "ownerName": "Reston Tech Holdings LLC",
+    "propertyAddress": "1140 Innovation Drive, Reston, VA 20190",
+    "jurisdiction": "Fairfax County, Virginia",
+    "taxYear": 2026,
+    "assessedValue": 17600000
+  },
+  {
+    "parcelNumber": "0351-07-0401",
+    "ownerName": "Dominion Industrial Partners LLC",
+    "propertyAddress": "2400 Commerce Park Drive, Herndon, VA 20171",
+    "jurisdiction": "Fairfax County, Virginia",
+    "taxYear": 2026,
+    "assessedValue": 7425000
+  },
+  {
+    "parcelNumber": "0351-07-0402",
+    "ownerName": "Dominion Industrial Partners LLC",
+    "propertyAddress": "2420 Commerce Park Drive, Herndon, VA 20171",
+    "jurisdiction": "Fairfax County, Virginia",
+    "taxYear": 2026,
+    "assessedValue": 6890000
+  },
+  {
+    "parcelNumber": "0351-07-0403",
+    "ownerName": "Dominion Industrial Partners LLC",
+    "propertyAddress": "2440 Commerce Park Drive, Herndon, VA 20171",
+    "jurisdiction": "Fairfax County, Virginia",
+    "taxYear": 2026,
+    "assessedValue": 8150000
+  },
+  {
+    "parcelNumber": "0351-07-0404",
+    "ownerName": "Dominion Industrial Partners LLC",
+    "propertyAddress": "2460 Commerce Park Drive, Herndon, VA 20171",
+    "jurisdiction": "Fairfax County, Virginia",
+    "taxYear": 2026,
+    "assessedValue": 7710000
+  },
+  {
+    "parcelNumber": "0412-15-0501",
+    "ownerName": "Fairfax Medical Properties LLC",
+    "propertyAddress": "3100 Wellness Avenue, Fairfax, VA 22030",
+    "jurisdiction": "City of Fairfax, Virginia",
+    "taxYear": 2026,
+    "assessedValue": 13200000
+  },
+  {
+    "parcelNumber": "0412-15-0502",
+    "ownerName": "Fairfax Medical Properties LLC",
+    "propertyAddress": "3120 Wellness Avenue, Fairfax, VA 22030",
+    "jurisdiction": "City of Fairfax, Virginia",
+    "taxYear": 2026,
+    "assessedValue": 14750000
+  },
+  {
+    "parcelNumber": "0412-15-0503",
+    "ownerName": "Fairfax Medical Properties LLC",
+    "propertyAddress": "3140 Wellness Avenue, Fairfax, VA 22030",
+    "jurisdiction": "City of Fairfax, Virginia",
+    "taxYear": 2026,
+    "assessedValue": 11900000
+  },
+  {
+    "parcelNumber": "0524-08-0601",
+    "ownerName": "Beltway Logistics LLC",
+    "propertyAddress": "7400 Distribution Way, Springfield, VA 22150",
+    "jurisdiction": "Fairfax County, Virginia",
+    "taxYear": 2026,
+    "assessedValue": 9250000
+  },
+  {
+    "parcelNumber": "0524-08-0602",
+    "ownerName": "Beltway Logistics LLC",
+    "propertyAddress": "7420 Distribution Way, Springfield, VA 22150",
+    "jurisdiction": "Fairfax County, Virginia",
+    "taxYear": 2026,
+    "assessedValue": 10400000
+  },
+  {
+    "parcelNumber": "0524-08-0603",
+    "ownerName": "Beltway Logistics LLC",
+    "propertyAddress": "7440 Distribution Way, Springfield, VA 22150",
+    "jurisdiction": "Fairfax County, Virginia",
+    "taxYear": 2026,
+    "assessedValue": 9875000
+  },
+  {
+    "parcelNumber": "0524-08-0604",
+    "ownerName": "Beltway Logistics LLC",
+    "propertyAddress": "7460 Distribution Way, Springfield, VA 22150",
+    "jurisdiction": "Fairfax County, Virginia",
+    "taxYear": 2026,
+    "assessedValue": 11250000
+  },
+  {
+    "parcelNumber": "0618-02-0701",
+    "ownerName": "Old Town Hospitality Group LLC",
+    "propertyAddress": "200 King Street, Alexandria, VA 22314",
+    "jurisdiction": "City of Alexandria, Virginia",
+    "taxYear": 2026,
+    "assessedValue": 6300000
+  },
+  {
+    "parcelNumber": "0618-02-0702",
+    "ownerName": "Old Town Hospitality Group LLC",
+    "propertyAddress": "214 King Street, Alexandria, VA 22314",
+    "jurisdiction": "City of Alexandria, Virginia",
+    "taxYear": 2026,
+    "assessedValue": 7150000
+  },
+  {
+    "parcelNumber": "0618-02-0703",
+    "ownerName": "Old Town Hospitality Group LLC",
+    "propertyAddress": "228 King Street, Alexandria, VA 22314",
+    "jurisdiction": "City of Alexandria, Virginia",
+    "taxYear": 2026,
+    "assessedValue": 5825000
+  },
+  {
+    "parcelNumber": "0618-02-0704",
+    "ownerName": "Old Town Hospitality Group LLC",
+    "propertyAddress": "242 King Street, Alexandria, VA 22314",
+    "jurisdiction": "City of Alexandria, Virginia",
+    "taxYear": 2026,
+    "assessedValue": 7950000
+  },
+  {
+    "parcelNumber": "0689-13-0801",
+    "ownerName": "Northern Virginia Storage LLC",
+    "propertyAddress": "4550 Eisenhower Avenue, Alexandria, VA 22304",
+    "jurisdiction": "City of Alexandria, Virginia",
+    "taxYear": 2026,
+    "assessedValue": 5200000
+  },
+  {
+    "parcelNumber": "0689-13-0802",
+    "ownerName": "Northern Virginia Storage LLC",
+    "propertyAddress": "4570 Eisenhower Avenue, Alexandria, VA 22304",
+    "jurisdiction": "City of Alexandria, Virginia",
+    "taxYear": 2026,
+    "assessedValue": 5480000
+  },
+  {
+    "parcelNumber": "0689-13-0803",
+    "ownerName": "Northern Virginia Storage LLC",
+    "propertyAddress": "4590 Eisenhower Avenue, Alexandria, VA 22304",
+    "jurisdiction": "City of Alexandria, Virginia",
+    "taxYear": 2026,
+    "assessedValue": 5050000
+  },
+  {
+    "parcelNumber": "0744-06-0901",
+    "ownerName": "Arlington Workspace Partners LLC",
+    "propertyAddress": "1500 Wilson Boulevard, Arlington, VA 22209",
+    "jurisdiction": "Arlington County, Virginia",
+    "taxYear": 2026,
+    "assessedValue": 18400000
+  },
+  {
+    "parcelNumber": "0744-06-0902",
+    "ownerName": "Arlington Workspace Partners LLC",
+    "propertyAddress": "1520 Wilson Boulevard, Arlington, VA 22209",
+    "jurisdiction": "Arlington County, Virginia",
+    "taxYear": 2026,
+    "assessedValue": 17250000
+  },
+  {
+    "parcelNumber": "0744-06-0903",
+    "ownerName": "Arlington Workspace Partners LLC",
+    "propertyAddress": "1540 Wilson Boulevard, Arlington, VA 22209",
+    "jurisdiction": "Arlington County, Virginia",
+    "taxYear": 2026,
+    "assessedValue": 19650000
+  },
+  {
+    "parcelNumber": "0811-10-1001",
+    "ownerName": "Ballston Mixed Use LLC",
+    "propertyAddress": "4200 Fairfax Drive, Arlington, VA 22203",
+    "jurisdiction": "Arlington County, Virginia",
+    "taxYear": 2026,
+    "assessedValue": 24200000
+  },
+  {
+    "parcelNumber": "0811-10-1002",
+    "ownerName": "Ballston Mixed Use LLC",
+    "propertyAddress": "4220 Fairfax Drive, Arlington, VA 22203",
+    "jurisdiction": "Arlington County, Virginia",
+    "taxYear": 2026,
+    "assessedValue": 25800000
+  },
+  {
+    "parcelNumber": "0811-10-1003",
+    "ownerName": "Ballston Mixed Use LLC",
+    "propertyAddress": "4240 Fairfax Drive, Arlington, VA 22203",
+    "jurisdiction": "Arlington County, Virginia",
+    "taxYear": 2026,
+    "assessedValue": 23150000
+  },
+  {
+    "parcelNumber": "0876-05-1101",
+    "ownerName": "Falls Church Retail Partners LLC",
+    "propertyAddress": "100 Broad Street, Falls Church, VA 22046",
+    "jurisdiction": "City of Falls Church, Virginia",
+    "taxYear": 2026,
+    "assessedValue": 6800000
+  },
+  {
+    "parcelNumber": "0876-05-1102",
+    "ownerName": "Falls Church Retail Partners LLC",
+    "propertyAddress": "120 Broad Street, Falls Church, VA 22046",
+    "jurisdiction": "City of Falls Church, Virginia",
+    "taxYear": 2026,
+    "assessedValue": 7350000
+  },
+  {
+    "parcelNumber": "0876-05-1103",
+    "ownerName": "Falls Church Retail Partners LLC",
+    "propertyAddress": "140 Broad Street, Falls Church, VA 22046",
+    "jurisdiction": "City of Falls Church, Virginia",
+    "taxYear": 2026,
+    "assessedValue": 6125000
+  },
+  {
+    "parcelNumber": "0933-12-1201",
+    "ownerName": "Dulles Flex Space Partners LLC",
+    "propertyAddress": "2250 Dulles Corner Boulevard, Herndon, VA 20171",
+    "jurisdiction": "Fairfax County, Virginia",
+    "taxYear": 2026,
+    "assessedValue": 13800000
+  },
+  {
+    "parcelNumber": "0933-12-1202",
+    "ownerName": "Dulles Flex Space Partners LLC",
+    "propertyAddress": "2270 Dulles Corner Boulevard, Herndon, VA 20171",
+    "jurisdiction": "Fairfax County, Virginia",
+    "taxYear": 2026,
+    "assessedValue": 14550000
+  },
+  {
+    "parcelNumber": "0933-12-1203",
+    "ownerName": "Dulles Flex Space Partners LLC",
+    "propertyAddress": "2290 Dulles Corner Boulevard, Herndon, VA 20171",
+    "jurisdiction": "Fairfax County, Virginia",
+    "taxYear": 2026,
+    "assessedValue": 12950000
+  },
+  {
+    "parcelNumber": "0998-03-1301",
+    "ownerName": "Merrifield Commerce LLC",
+    "propertyAddress": "2700 Gallows Road, Vienna, VA 22180",
+    "jurisdiction": "Fairfax County, Virginia",
+    "taxYear": 2026,
+    "assessedValue": 15600000
+  },
+  {
+    "parcelNumber": "0998-03-1302",
+    "ownerName": "Merrifield Commerce LLC",
+    "propertyAddress": "2720 Gallows Road, Vienna, VA 22180",
+    "jurisdiction": "Fairfax County, Virginia",
+    "taxYear": 2026,
+    "assessedValue": 14900000
+  },
+  {
+    "parcelNumber": "0998-03-1303",
+    "ownerName": "Merrifield Commerce LLC",
+    "propertyAddress": "2740 Gallows Road, Vienna, VA 22180",
+    "jurisdiction": "Fairfax County, Virginia",
+    "taxYear": 2026,
+    "assessedValue": 16450000
+  },
+  {
+    "parcelNumber": "1045-14-1401",
+    "ownerName": "Route 50 Office Ventures LLC",
+    "propertyAddress": "10500 Main Street, Fairfax, VA 22030",
+    "jurisdiction": "City of Fairfax, Virginia",
+    "taxYear": 2026,
+    "assessedValue": 10800000
+  },
+  {
+    "parcelNumber": "1045-14-1402",
+    "ownerName": "Route 50 Office Ventures LLC",
+    "propertyAddress": "10520 Main Street, Fairfax, VA 22030",
+    "jurisdiction": "City of Fairfax, Virginia",
+    "taxYear": 2026,
+    "assessedValue": 11650000
+  }
+]

@@ -83,15 +83,24 @@ is a valid configuration.
 
 ## Sample Monitoring Data
 
-`MonitoringDataSource` contains 100 hourly observations for each sample metric:
+`MonitoringDataSource` loads a collection of hourly observations for each sample metric from JSON files located in `Features/Monitoring/`:
 
 ```text
-documents_processed
-average_processing_minutes
-error_rate_percent
+documents_processed.json
+average_processing_minutes.json
+error_rate_percent.json
 ```
 
-The final observation is intentionally abnormal. The data source also includes recent operational events and deployment details so the agent has evidence it can choose to inspect.
+The data source also deserializes recent operational events and deployment details from:
+
+```text
+operations_events.json
+deployment_details.json
+```
+
+`Lesson10.MonitoringAndAnomalyDetection.csproj` copies `Features/Monitoring/*.json` to the build output directory (`PreserveNewest`), and `MonitoringDataSource` resolves and reads these files when the service initializes.
+
+The final observation in each metric series is intentionally abnormal. Operational events and deployment details provide the historical context and evidence that the agent can choose to inspect during an anomaly investigation.
 
 ---
 
@@ -259,11 +268,20 @@ Lesson10.MonitoringAndAnomalyDetection/
 │   │   └── RagOptions.cs
 │   ├── Monitoring/
 │   │   ├── AnomalyAnalysisAgent.cs
+│   │   ├── DeploymentDetails.cs
+│   │   ├── MetricObservation.cs
+│   │   ├── MonitoringAssessment.cs
+│   │   ├── MonitoringController.cs
 │   │   ├── MonitoringDataSource.cs
 │   │   ├── MonitoringService.cs
 │   │   ├── MonitoringTools.cs
+│   │   ├── OperationalEvent.cs
 │   │   ├── RollingZScoreDetector.cs
-│   │   └── ...
+│   │   ├── average_processing_minutes.json
+│   │   ├── deployment_details.json
+│   │   ├── documents_processed.json
+│   │   ├── error_rate_percent.json
+│   │   └── operations_events.json
 │   └── PropertyReviews/
 ├── Infrastructure/
 │   ├── Ai/

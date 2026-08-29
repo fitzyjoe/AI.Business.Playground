@@ -17,4 +17,11 @@
       <PackageReference Include="OllamaSharp" Version="5.4.30" />
     </ItemGroup>
 
+    <ItemGroup>
+      <None Update="Features/Monitoring/*.json">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+      </None>
+    </ItemGroup>
+
 </Project>

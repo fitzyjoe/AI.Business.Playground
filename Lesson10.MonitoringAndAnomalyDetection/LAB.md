@@ -16,18 +16,23 @@ Add a new monitored metric and anomaly scenario so deterministic detection trigg
 
 Run the existing monitoring scan and trace the two phases: deterministic detection followed by bounded agent investigation.
 
+Inspect the sample metric observations and events in `Features/Monitoring/*.json` to see how baseline and anomalous records are structured.
+
 ## Build — Add a New Anomaly Scenario
 
-Add a metric named `failed_document_percent` with a realistic historical baseline and a final observation that can be made anomalous.
+Add a metric named `failed_document_percent`:
+1. Create `Features/Monitoring/failed_document_percent.json` with a realistic historical baseline and a final observation that can be made anomalous.
+2. Register `"failed_document_percent.json"` in the `MetricFileNames` array in `MonitoringDataSource.cs`.
+3. Add any supporting operational event in `operations_events.json` or deployment changes in `deployment_details.json` needed for a meaningful investigation.
 
-Add any supporting operational event or deployment evidence needed for a meaningful investigation. Preserve the existing separation between:
+Preserve the existing separation between:
 
 ```text
 detection -> deterministic code
 investigation -> agent
 ```
 
-The detector, not the LLM, must decide whether the latest value crosses the anomaly threshold.
+The detector, not the LLM, must decide whether the latest value crosses the anomaly threshold. When you modify JSON data files, rebuild or run the project so the updated files are copied to the build output.
 
 ## Run — Compare Normal and Anomalous Cases
 
@@ -54,7 +59,7 @@ Verify that the normal case produces no AI investigation and the anomalous case 
 ## Lab Completion Criteria
 
 ```text
-✓ new metric is included in monitoring data
+✓ new metric JSON file is created and registered in MetricFileNames
 ✓ deterministic detector identifies the planted anomaly
 ✓ no LLM call is needed for the normal case
 ✓ anomalous case invokes bounded investigation

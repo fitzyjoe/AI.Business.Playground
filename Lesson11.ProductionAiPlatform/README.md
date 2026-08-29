@@ -844,7 +844,7 @@ The fallback policy requires authentication for controller endpoints unless an e
 
 ### Provider policy is application-wide
 
-All chat-provider resolution goes through `AiProviderFactory`, which enforces `AllowedProviders`. A background or monitoring workflow does not bypass the allowlist just because it did not originate from `MessageRequest`.
+All chat-provider resolutions go through `AiProviderFactory`, which enforces `AllowedProviders`. A background or monitoring workflow does not bypass the allowlist just because it did not originate from `MessageRequest`.
 
 ### Registered providers are not automatically instantiated
 

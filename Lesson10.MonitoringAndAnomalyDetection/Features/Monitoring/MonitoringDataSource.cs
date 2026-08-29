@@ -1,23 +1,19 @@
+using System.Text.Json;
+
 namespace Lesson10.MonitoringAndAnomalyDetection.Features.Monitoring;
 
 public sealed class MonitoringDataSource
 {
-    private const int ObservationCount = 100;
+    private static readonly JsonSerializerOptions JsonOptions = new()
+    {
+        PropertyNameCaseInsensitive = true
+    };
 
-    private static readonly double[] StableOffsets =
+    private static readonly string[] MetricFileNames =
     [
-        -1.0,
-        -0.5,
-        0.1,
-        0.7,
-        1.0,
-        0.4,
-        -0.8,
-        0.2,
-        0.9,
-        -0.3,
-        -0.6,
-        0.5
+        "documents_processed.json",
+        "average_processing_minutes.json",
+        "error_rate_percent.json"
     ];
 
     private readonly Dictionary<string, IReadOnlyList<MetricObservation>> _observations;
@@ -26,45 +22,50 @@ public sealed class MonitoringDataSource
 
     public MonitoringDataSource()
     {
-        var now = DateTimeOffset.UtcNow;
+        var basePath = ResolveDataDirectory();
 
-        _observations = new Dictionary<string, IReadOnlyList<MetricObservation>>(StringComparer.OrdinalIgnoreCase)
+        var observations = new Dictionary<string, IReadOnlyList<MetricObservation>>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var metricFileName in MetricFileNames)
         {
-            ["documents_processed"] = BuildSeries("documents_processed", now, ObservationCount, 1005, 20, 412),
-            ["average_processing_minutes"] = BuildSeries("average_processing_minutes", now, ObservationCount, 5.0, 0.3, 12.6),
-            ["error_rate_percent"] = BuildSeries("error_rate_percent", now, ObservationCount, 1.0, 0.2, 7.8)
-        };
+            var filePath = Path.Combine(basePath, metricFileName);
+            if (File.Exists(filePath))
+            {
+                using var stream = File.OpenRead(filePath);
+                var items = JsonSerializer.Deserialize<List<MetricObservation>>(stream, JsonOptions) ?? [];
+                if (items.Count > 0)
+                {
+                    var metricName = items[0].Metric;
+                    observations[metricName] = items.OrderBy(i => i.Timestamp).ToArray();
+                }
+            }
+        }
 
-        _events =
-        [
-            new OperationalEvent(
-                now.AddMinutes(-20),
-                "deployment",
-                "Version 4.8 of the document-ingestion service was deployed."),
+        _observations = observations;
 
-            new OperationalEvent(
-                now.AddHours(-5),
-                "batch-job",
-                "The nightly customer export completed successfully."),
+        var eventsPath = Path.Combine(basePath, "operations_events.json");
+        if (File.Exists(eventsPath))
+        {
+            using var stream = File.OpenRead(eventsPath);
+            _events = JsonSerializer.Deserialize<List<OperationalEvent>>(stream, JsonOptions)?
+                .OrderByDescending(e => e.Timestamp)
+                .ToArray() ?? [];
+        }
+        else
+        {
+            _events = [];
+        }
 
-            new OperationalEvent(
-                now.AddHours(-9),
-                "maintenance",
-                "Routine database index maintenance completed successfully.")
-        ];
-
-        _deployments =
-        [
-            new DeploymentDetails(
-                "4.8",
-                now.AddMinutes(-20),
-                "document-ingestion",
-                [
-                    "Upgraded the document parser library.",
-                    "Increased queue-processing concurrency from 12 to 48.",
-                    "Changed the retry policy from 3 attempts to 1 attempt."
-                ])
-        ];
+        var deploymentsPath = Path.Combine(basePath, "deployment_details.json");
+        if (File.Exists(deploymentsPath))
+        {
+            using var stream = File.OpenRead(deploymentsPath);
+            _deployments = JsonSerializer.Deserialize<List<DeploymentDetails>>(stream, JsonOptions) ?? [];
+        }
+        else
+        {
+            _deployments = [];
+        }
     }
 
     public IReadOnlyCollection<string> MetricNames => _observations.Keys;
@@ -83,7 +84,13 @@ public sealed class MonitoringDataSource
 
     public IReadOnlyList<OperationalEvent> GetRecentEvents(int hours)
     {
-        var cutoff = DateTimeOffset.UtcNow.AddHours(-hours);
+        if (_events.Count == 0)
+        {
+            return [];
+        }
+
+        var referenceTime = _events.Max(item => item.Timestamp);
+        var cutoff = referenceTime.AddHours(-hours);
 
         return _events
             .Where(item => item.Timestamp >= cutoff)
@@ -100,32 +107,24 @@ public sealed class MonitoringDataSource
                 StringComparison.OrdinalIgnoreCase));
     }
 
-    private static IReadOnlyList<MetricObservation> BuildSeries(
-        string metric,
-        DateTimeOffset now,
-        int count,
-        double baseline,
-        double variation,
-        double anomalyValue)
+    private static string ResolveDataDirectory()
     {
-        if (count < 2)
+        var candidates = new[]
         {
-            throw new ArgumentOutOfRangeException(nameof(count), "At least two observations are required.");
+            Path.Combine(AppContext.BaseDirectory, "Features", "Monitoring"),
+            Path.Combine(Directory.GetCurrentDirectory(), "Lesson10.MonitoringAndAnomalyDetection", "Features", "Monitoring"),
+            Path.Combine(Directory.GetCurrentDirectory(), "Features", "Monitoring"),
+            Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Features", "Monitoring")
+        };
+
+        foreach (var candidate in candidates)
+        {
+            if (Directory.Exists(candidate) && File.Exists(Path.Combine(candidate, "operations_events.json")))
+            {
+                return candidate;
+            }
         }
 
-        var values = Enumerable
-            .Range(0, count - 1)
-            .Select(index => baseline + StableOffsets[index % StableOffsets.Length] * variation)
-            .Append(anomalyValue)
-            .ToArray();
-
-        return values
-            .Select(
-                (value, index) =>
-                    new MetricObservation(
-                        metric,
-                        now.AddHours(index - values.Length + 1),
-                        value))
-            .ToArray();
+        return Path.Combine(AppContext.BaseDirectory, "Features", "Monitoring");
     }
 }

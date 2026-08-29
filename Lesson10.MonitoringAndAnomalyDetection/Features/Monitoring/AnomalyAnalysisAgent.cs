@@ -32,6 +32,8 @@ public sealed class AnomalyAnalysisAgent
         making a deployment-specific hypothesis.
         Do not claim that a deployment change caused or contributed to an anomaly unless you have inspected the
         deployment details.
+        
+        In RelevantEvents, only include events that are plausibly correlated with or contributed to the anomalous behavior. Do not include routine, unrelated, or prior baseline events.
 
         RecommendedChecks are actions for a human operator after your investigation.
         Never include calls to your own tools in RecommendedChecks. Use those tools yourself before producing the

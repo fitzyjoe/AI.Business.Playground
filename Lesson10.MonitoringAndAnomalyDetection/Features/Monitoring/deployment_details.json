@@ -1,0 +1,30 @@
+[
+  {
+    "version": "4.6",
+    "deployedAt": "2024-10-15T02:30:00Z",
+    "service": "document-ingestion",
+    "changes": [
+      "Updated logging format for structured telemetry.",
+      "Optimized document payload serialization buffer."
+    ]
+  },
+  {
+    "version": "4.7",
+    "deployedAt": "2024-10-15T10:15:00Z",
+    "service": "document-ingestion",
+    "changes": [
+      "Added support for multi-page TIFF extraction.",
+      "Improved OCR pre-processing filter pipeline."
+    ]
+  },
+  {
+    "version": "4.8",
+    "deployedAt": "2024-10-15T23:40:00Z",
+    "service": "document-ingestion",
+    "changes": [
+      "Upgraded the document parser library.",
+      "Increased queue-processing concurrency from 12 to 48.",
+      "Changed the retry policy from 3 attempts to 1 attempt."
+    ]
+  }
+]

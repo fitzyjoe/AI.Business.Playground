@@ -45,8 +45,8 @@ By the end of Lesson03, you should understand:
 - how later messages identify an existing conversation with a `conversationId`;
 - why the application must resend prior messages to a stateless LLM API;
 - how system, user, and assistant roles are represented;
-- why provider, model, temperature, and other settings belong to the conversation;
-- why the selected provider should not silently change midway through a conversation;
+- in our implementation, provider, model, temperature, and other settings belong to the conversation;
+- in our implementation, the selected provider should not silently change midway through a conversation;
 - why pending messages should be persisted only after the AI call succeeds;
 - how both Ollama and OpenAI remain behind the same application abstraction.
 
